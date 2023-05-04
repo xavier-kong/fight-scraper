@@ -13,8 +13,9 @@ import (
 
 type Event struct {
 	name string
-	timestamp int
+	timestampSeconds int
 	headline string
+	url string
 }
 
 func main() {
@@ -22,33 +23,35 @@ func main() {
 		colly.AllowedDomains("www.ufc.com"),
 	)
 
-	today := time.Now()
+	todaySecs := int(time.Now().UnixMilli() / 1000)
 
 	c.OnHTML(".c-card-event--result__info", func(e *colly.HTMLElement) {
 		eventHeadline := e.ChildText(".c-card-event--result__headline")
 
 		timestampString := e.ChildAttr(".c-card-event--result__date", "data-main-card-timestamp")
-		timestamp, err := strconv.Atoi(timestampString);
+		timestampMs, err := strconv.Atoi(timestampString);
 
 		if err != nil {
 			fmt.Printf("error converting %s to int", e.ChildAttr(".c-card-event--result__date", "data-main-card-timestamp"));
 			return
 		}
 
-		eventTime := time.UnixMilli(int64(timestamp))
-
-		if eventTime.Before(today) {
-			fmt.Println(eventTime)
-			fmt.Printf("event %s has past", eventHeadline)
+		if timestampMs < todaySecs {
+			fmt.Printf("event %s has past\n", eventHeadline)
 			return
 		}
 
-		eventName := convertUrlToEventName(e.ChildAttr("a", "href"))
+		eventUrlPath := e.ChildAttr("a", "href")
+
+		eventUrl := "https://www.ufc.com" + eventUrlPath
+
+		eventName := convertUrlToEventName(eventUrlPath)
 
 		event := Event{
 			name: eventName,
 			headline: eventHeadline,
-			timestamp: timestamp,
+			timestampSeconds: timestampMs,
+			url: eventUrl,
 		}
 
 		fmt.Println(event)
