@@ -1,35 +1,68 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/gocolly/colly"
+	"github.com/joho/godotenv"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 type Event struct {
-	id int
-	name string
-	timestampSeconds int
-	headline string
-	url string
-	org string
+	ID uint
+	Name string `gorm:"size: 255; not null;" json:"name"`
+	TimestampSeconds int `gorm:"type: numeric; not null;" json:"timestamp_seconds"`
+	Headline string `gorm:"size: 255; not null;" json:"headline"`
+	Url string `gorm:"size: 255; not null;" json:"url"`
+	Org string `gorm:"size: 255; not null;" json:"org"`
 }
 
+var Database *gorm.DB
+
 func main() {
-	existingEvents := createExistingEventsMap()
-	newEvents := make([]Event, 0)
+	loadEnv()
+	createDbClient()
 
-	for _, event := range fetchEvents() {
-		if _, exists := existingEvents[event.name]; !exists {
-			newEvents = append(newEvents, event)
-		}
+	existingEvents := createExistingEventsMap(Database)
+	newEvents := filterOutOldEvents(existingEvents)
+	writeNewEventsToDb(Database, newEvents)
+}
+
+func handleError(err error) {
+	log.Fatal(err)
+}
+
+func loadEnv() {
+	if err := godotenv.Load(".env"); err != nil {
+		handleError(errors.New("error loading .env file"))
 	}
+}
 
-	writeNewEventsToDb(newEvents)
+func createDbClient() {
+	var err error
+	//dsn := fmt.Sprintf("%s&parseTime=True", os.Getenv("DSN"))
+
+	dsn := os.Getenv("DSN")
+
+	Database, err = gorm.Open(
+		mysql.Open(dsn),
+		&gorm.Config{DisableForeignKeyConstraintWhenMigrating: true},
+	)
+
+	if err == nil {
+		fmt.Println("Successfully connected to PlanetScale!")
+	} else {
+		handleError(err)
+	}
 }
 
 func convertUrlToEventName(url string) string {
@@ -39,16 +72,48 @@ func convertUrlToEventName(url string) string {
 	return c.String(res)
 }
 
-func createExistingEventsMap() map[string]bool {
+func createExistingEventsMap(db *gorm.DB) map[string]bool {
 	m := make(map[string]bool)
+	var events []Event
 
-	// fetch all future from db
+	todaySecs := int(time.Now().UnixMilli() / 1000)
+
+	result := db.Where("timestamp_seconds > ?", todaySecs).Find(&events)
+
+	if result.Error != nil {
+		handleError(result.Error)
+	}
+
+	for _, event := range events {
+		m[event.Name] = true
+	}
 
 	return m
 }
 
-func writeNewEventsToDb(events []Event) {
+func filterOutOldEvents(existingEvents map[string]bool) []Event {
+	newEvents := make([]Event, 0)
 
+	for _, event := range fetchEvents() {
+		if _, exists := existingEvents[event.Name]; !exists {
+			newEvents = append(newEvents, event)
+		}
+	}
+
+	return newEvents
+}
+
+func writeNewEventsToDb(db *gorm.DB, events []Event) {
+	if (len(events) == 0) {
+		fmt.Println("no new events...returning")
+		return
+	}
+
+	result := db.Create(&events)
+
+	if result.Error != nil {
+		handleError(result.Error)
+	}
 }
 
 func fetchEvents() []Event {
@@ -72,7 +137,6 @@ func fetchEvents() []Event {
 		}
 
 		if timestampMs < todaySecs {
-			fmt.Printf("event %s has past\n", eventHeadline)
 			return
 		}
 
@@ -83,11 +147,11 @@ func fetchEvents() []Event {
 		eventName := convertUrlToEventName(eventUrlPath)
 
 		event := Event{
-			name: eventName,
-			headline: eventHeadline,
-			timestampSeconds: timestampMs,
-			url: eventUrl,
-			org: "UFC",
+			Name: eventName,
+			Headline: eventHeadline,
+			TimestampSeconds: timestampMs,
+			Url: eventUrl,
+			Org: "UFC",
 		}
 
 		events = append(events, event)
