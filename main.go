@@ -5,26 +5,13 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
-	"strings"
 	"time"
-
-	"github.com/gocolly/colly"
 	"github.com/joho/godotenv"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"github.com/xavier-kong/fight-scraper/types"
+	"github.com/xavier-kong/fight-scraper/scrapers"
 )
-
-type Event struct {
-	ID uint
-	Name string `gorm:"size: 255; not null;" json:"name"`
-	TimestampSeconds int `gorm:"type: numeric; not null;" json:"timestamp_seconds"`
-	Headline string `gorm:"size: 255; not null;" json:"headline"`
-	Url string `gorm:"size: 255; not null;" json:"url"`
-	Org string `gorm:"size: 255; not null;" json:"org"`
-}
 
 var Database *gorm.DB
 
@@ -33,7 +20,7 @@ func main() {
 	createDbClient()
 
 	existingEvents := createExistingEventsMap(Database)
-	newEvents := filterOutOldEvents(existingEvents)
+	newEvents := scrapers.FetchNewEvents(existingEvents)
 	writeNewEventsToDb(Database, newEvents)
 }
 
@@ -65,16 +52,9 @@ func createDbClient() {
 	}
 }
 
-func convertUrlToEventName(url string) string {
-	res := strings.ReplaceAll(url, "/event/ufc", "UFC")
-	res = strings.ReplaceAll(res, "-", " ")
-	c := cases.Title(language.English, cases.NoLower)
-	return c.String(res)
-}
-
-func createExistingEventsMap(db *gorm.DB) map[string]bool {
-	m := make(map[string]bool)
-	var events []Event
+func createExistingEventsMap(db *gorm.DB) map[string]map[string]bool {
+	m := make(map[string]map[string]bool)
+	var events []types.Event
 
 	todaySecs := int(time.Now().UnixMilli() / 1000)
 
@@ -85,25 +65,17 @@ func createExistingEventsMap(db *gorm.DB) map[string]bool {
 	}
 
 	for _, event := range events {
-		m[event.Name] = true
+		if _, exists := m[event.Org]; !exists {
+			m[event.Org] = make(map[string]bool)
+		}
+
+		m[event.Org][event.Name] = true
 	}
 
 	return m
 }
 
-func filterOutOldEvents(existingEvents map[string]bool) []Event {
-	newEvents := make([]Event, 0)
-
-	for _, event := range fetchEvents() {
-		if _, exists := existingEvents[event.Name]; !exists {
-			newEvents = append(newEvents, event)
-		}
-	}
-
-	return newEvents
-}
-
-func writeNewEventsToDb(db *gorm.DB, events []Event) {
+func writeNewEventsToDb(db *gorm.DB, events []types.Event) {
 	if (len(events) == 0) {
 		fmt.Println("no new events...returning")
 		return
@@ -114,50 +86,4 @@ func writeNewEventsToDb(db *gorm.DB, events []Event) {
 	if result.Error != nil {
 		handleError(result.Error)
 	}
-}
-
-func fetchEvents() []Event {
-	c := colly.NewCollector(
-		colly.AllowedDomains("www.ufc.com"),
-	)
-
-	todaySecs := int(time.Now().UnixMilli() / 1000)
-
-	events := make([]Event, 0)
-
-	c.OnHTML(".c-card-event--result__info", func(e *colly.HTMLElement) {
-		eventHeadline := e.ChildText(".c-card-event--result__headline")
-
-		timestampString := e.ChildAttr(".c-card-event--result__date", "data-main-card-timestamp")
-		timestampMs, err := strconv.Atoi(timestampString);
-
-		if err != nil {
-			fmt.Printf("error converting %s to int", e.ChildAttr(".c-card-event--result__date", "data-main-card-timestamp"));
-			return
-		}
-
-		if timestampMs < todaySecs {
-			return
-		}
-
-		eventUrlPath := e.ChildAttr("a", "href")
-
-		eventUrl := "https://www.ufc.com" + eventUrlPath
-
-		eventName := convertUrlToEventName(eventUrlPath)
-
-		event := Event{
-			Name: eventName,
-			Headline: eventHeadline,
-			TimestampSeconds: timestampMs,
-			Url: eventUrl,
-			Org: "UFC",
-		}
-
-		events = append(events, event)
-	})
-
-	c.Visit("https://www.ufc.com/events#events-list-upcoming")
-
-	return events;
 }
