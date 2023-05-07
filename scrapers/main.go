@@ -2,11 +2,11 @@ package scrapers
 
 import ("github.com/xavier-kong/fight-scraper/types")
 
-func FetchNewEvents(existingEvents map[string]map[string]bool) []types.Event {
-	events := make([]types.Event, 0)
+func FetchNewEvents(existingEvents map[string]map[string]types.Event) (newEvents []types.Event, eventsToUpdate []types.Event) {
 
-	ufcEvents := fetchUfcEvents(existingEvents["ufc"])
-	events = append(events, ufcEvents...)
+	ufcNewEvents, ufcEventsToUpdate := fetchUfcEvents(existingEvents["ufc"])
+	newEvents = append(newEvents , ufcNewEvents...)
+	eventsToUpdate = append(eventsToUpdate, ufcEventsToUpdate...)
 
-	return events;
+	return;
 }

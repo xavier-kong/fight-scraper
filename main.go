@@ -20,8 +20,9 @@ func main() {
 	createDbClient()
 
 	existingEvents := createExistingEventsMap(Database)
-	newEvents := scrapers.FetchNewEvents(existingEvents)
-	writeNewEventsToDb(Database, newEvents)
+	newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
+	go writeNewEventsToDb(Database, newEvents)
+	go updateExistingEvents(Database, eventsToUpdate)
 }
 
 func handleError(err error) {
@@ -52,8 +53,8 @@ func createDbClient() {
 	}
 }
 
-func createExistingEventsMap(db *gorm.DB) map[string]map[string]bool {
-	m := make(map[string]map[string]bool)
+func createExistingEventsMap(db *gorm.DB) map[string]map[string]types.Event {
+	m := make(map[string]map[string]types.Event)
 	var events []types.Event
 
 	todaySecs := int(time.Now().UnixMilli() / 1000)
@@ -66,10 +67,10 @@ func createExistingEventsMap(db *gorm.DB) map[string]map[string]bool {
 
 	for _, event := range events {
 		if _, exists := m[event.Org]; !exists {
-			m[event.Org] = make(map[string]bool)
+			m[event.Org] = make(map[string]types.Event)
 		}
 
-		m[event.Org][event.Name] = true
+		m[event.Org][event.Name] = event
 	}
 
 	return m
