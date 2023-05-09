@@ -13,11 +13,11 @@ import (
 	"github.com/xavier-kong/fight-scraper/scrapers"
 )
 
-var Database *gorm.DB
-
 func main() {
+	var Database *gorm.DB
+
 	loadEnv()
-	createDbClient()
+	createDbClient(Database)
 
 	existingEvents := createExistingEventsMap(Database)
 	newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
@@ -35,7 +35,7 @@ func loadEnv() {
 	}
 }
 
-func createDbClient() {
+func createDbClient(Database *gorm.DB) {
 	var err error
 	//dsn := fmt.Sprintf("%s&parseTime=True", os.Getenv("DSN"))
 
@@ -86,5 +86,11 @@ func writeNewEventsToDb(db *gorm.DB, events []types.Event) {
 
 	if result.Error != nil {
 		handleError(result.Error)
+	}
+}
+
+func updateExistingEvents(db *gorm.DB, eventsToUpdate []types.Event) {
+	for _, event := range eventsToUpdate {
+		db.Save(&event)
 	}
 }
