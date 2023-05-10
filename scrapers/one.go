@@ -2,57 +2,55 @@ package scrapers
 
 import (
 	"fmt"
-	"strconv"
-	"time"
+	//"strconv"
+	//"time"
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"
 )
 
-func fetchOneEvents(existingEvents map[string]bool) []types.Event {
+func fetchEventUrls(c *colly.Collector) []string {
+	eventUrls := make([]string, 0)
+
+	c.OnHTML("#upcoming-events-section", func(e *colly.HTMLElement) {
+		e.ForEach(".simple-post-card", func(i int, h *colly.HTMLElement) {
+			eventUrls = append(eventUrls, h.ChildAttr("a", "href"))
+		})
+	})
+
+	c.Visit("https://www.onefc.com/events")
+
+	return eventUrls;
+}
+
+func getEventInfo(c *colly.Collector, url string) types.Event {
+
+}
+
+func fetchOneEvents(existingEvents map[string]types.Event) ([]types.Event, []types.Event) {
 	c := colly.NewCollector(
-		colly.AllowedDomains("www.ufc.com"),
+		colly.AllowedDomains("www.onefc.com"),
 	)
 
-	todaySecs := int(time.Now().UnixMilli() / 1000)
+	var newEvents []types.Event
+	var eventsToUpdate []types.Event
 
-	var events []types.Event
+	eventUrls := fetchEventUrls(c)
 
-	c.OnHTML(".c-card-event--result__info", func(e *colly.HTMLElement) {
-		eventHeadline := e.ChildText(".c-card-event--result__headline")
+	for _, url := range(eventUrls) {
+		event := getEventInfo(c, url)
 
-		timestampString := e.ChildAttr(".c-card-event--result__date", "data-main-card-timestamp")
-		timestampMs, err := strconv.Atoi(timestampString);
+		existingEventData, exists := existingEvents[event.Name]
 
-		if err != nil { fmt.Printf("error converting %s to int", e.ChildAttr(".c-card-event--result__date", "data-main-card-timestamp")); return
+		if exists {
+			if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
+			existingEventData.Headline != event.Headline) {
+				event.ID =  existingEventData.ID
+				eventsToUpdate = append(eventsToUpdate, event)
+			}
+		} else {
+			newEvents = append(newEvents, event)
+		}
 	}
 
-	if timestampMs < todaySecs {
-		return
-	}
-
-	eventUrlPath := e.ChildAttr("a", "href")
-
-	eventUrl := "https://www.ufc.com" + eventUrlPath
-
-	eventName := convertUrlToEventName(eventUrlPath)
-
-	if _, exists := existingEvents[eventName]; exists {
-		fmt.Printf("event: %s already exists", eventName)
-		return
-	}
-
-	event := types.Event{
-		Name: eventName,
-		Headline: eventHeadline,
-		TimestampSeconds: timestampMs,
-		Url: eventUrl,
-		Org: "ufc",
-	}
-
-	events = append(events, event)
-})
-
-c.Visit("https://www.ufc.com/events#events-list-upcoming")
-
-return events
+	return newEvents, eventsToUpdate
 }

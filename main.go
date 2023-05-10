@@ -13,16 +13,18 @@ import (
 	"github.com/xavier-kong/fight-scraper/scrapers"
 )
 
+
+var Database *gorm.DB
+
 func main() {
-	var Database *gorm.DB
-
 	loadEnv()
-	createDbClient(Database)
+	createDbClient()
 
-	existingEvents := createExistingEventsMap(Database)
-	newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
-	go writeNewEventsToDb(Database, newEvents)
-	go updateExistingEvents(Database, eventsToUpdate)
+	existingEvents := createExistingEventsMap()
+	scrapers.FetchNewEvents(existingEvents)
+	//newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
+	//go writeNewEventsToDb(Database, newEvents)
+	//go updateExistingEvents(Database, eventsToUpdate)
 }
 
 func handleError(err error) {
@@ -35,7 +37,7 @@ func loadEnv() {
 	}
 }
 
-func createDbClient(Database *gorm.DB) {
+func createDbClient() {
 	var err error
 	//dsn := fmt.Sprintf("%s&parseTime=True", os.Getenv("DSN"))
 
@@ -53,13 +55,13 @@ func createDbClient(Database *gorm.DB) {
 	}
 }
 
-func createExistingEventsMap(db *gorm.DB) map[string]map[string]types.Event {
+func createExistingEventsMap() map[string]map[string]types.Event {
 	m := make(map[string]map[string]types.Event)
 	var events []types.Event
 
 	todaySecs := int(time.Now().UnixMilli() / 1000)
 
-	result := db.Where("timestamp_seconds > ?", todaySecs).Find(&events)
+	result := Database.Where("timestamp_seconds > ?", todaySecs).Find(&events)
 
 	if result.Error != nil {
 		handleError(result.Error)
@@ -76,21 +78,21 @@ func createExistingEventsMap(db *gorm.DB) map[string]map[string]types.Event {
 	return m
 }
 
-func writeNewEventsToDb(db *gorm.DB, events []types.Event) {
+func writeNewEventsToDb(events []types.Event) {
 	if (len(events) == 0) {
 		fmt.Println("no new events...returning")
 		return
 	}
 
-	result := db.Create(&events)
+	result := Database.Create(&events)
 
 	if result.Error != nil {
 		handleError(result.Error)
 	}
 }
 
-func updateExistingEvents(db *gorm.DB, eventsToUpdate []types.Event) {
+func updateExistingEvents(eventsToUpdate []types.Event) {
 	for _, event := range eventsToUpdate {
-		db.Save(&event)
+		Database.Save(&event)
 	}
 }
