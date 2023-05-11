@@ -22,8 +22,23 @@ func fetchEventUrls(c *colly.Collector) []string {
 	return eventUrls;
 }
 
-func getEventInfo(c *colly.Collector, url string) types.Event {
+func getEventInfo(url string) types.Event {
+	c := colly.NewCollector(
+		colly.AllowedDomains("www.onefc.com"),
+	)
 
+	event := types.Event{
+		Url: url,
+		Org: "onefc",
+	}
+
+	c.OnHTML(".info-content", func(e *colly.HTMLElement) {
+		event.Headline = e.ChildText(".title")
+	})
+
+	c.Visit(url)
+
+	return event
 }
 
 func fetchOneEvents(existingEvents map[string]types.Event) ([]types.Event, []types.Event) {
@@ -37,7 +52,7 @@ func fetchOneEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	eventUrls := fetchEventUrls(c)
 
 	for _, url := range(eventUrls) {
-		event := getEventInfo(c, url)
+		event := getEventInfo(url)
 
 		existingEventData, exists := existingEvents[event.Name]
 
