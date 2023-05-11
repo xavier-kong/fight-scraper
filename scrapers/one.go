@@ -2,6 +2,7 @@ package scrapers
 
 import (
 	"fmt"
+	"strings"
 	//"strconv"
 	//"time"
 	"github.com/gocolly/colly"
@@ -34,6 +35,16 @@ func getEventInfo(url string) types.Event {
 
 	c.OnHTML(".info-content", func(e *colly.HTMLElement) {
 		event.Headline = e.ChildText(".title")
+
+		e.ForEach(".event-date-time", func(i int, h *colly.HTMLElement) {
+			if (h.ChildText(".timezone") == "ICT") {
+				dateString := createDateString(h.ChildText(".day"))
+				timeString := createTimeString(h.ChildText(".time"))
+				event.TimestampSeconds = createTimestamp(dateString, timeString)
+			}
+		})
+
+
 	})
 
 	c.Visit(url)
@@ -68,4 +79,18 @@ func fetchOneEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	}
 
 	return newEvents, eventsToUpdate
+}
+
+func createDateString(day string) string {
+	day = strings.Replace(day, " (Fri)", "", 1)
+}
+
+func createTimeString(time string) string {
+
+}
+
+func createTimestamp(day string, time string) int {
+
+
+	return 0
 }
