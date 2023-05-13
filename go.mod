@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/gocolly/colly v1.2.0
+	github.com/icza/gox v0.0.0-20230330130131-23e1aaac139e
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/text v0.9.0
 	gorm.io/driver/mysql v1.5.0

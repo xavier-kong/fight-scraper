@@ -2,10 +2,10 @@ package scrapers
 
 import (
 	"fmt"
-	"strings"
-	//"strconv"
-	//"time"
+	"regexp"
+	"time"
 	"github.com/gocolly/colly"
+	"github.com/icza/gox/timex"
 	"github.com/xavier-kong/fight-scraper/types"
 )
 
@@ -43,8 +43,6 @@ func getEventInfo(url string) types.Event {
 				event.TimestampSeconds = createTimestamp(dateString, timeString)
 			}
 		})
-
-
 	})
 
 	c.Visit(url)
@@ -82,11 +80,25 @@ func fetchOneEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 }
 
 func createDateString(day string) string {
-	day = strings.Replace(day, " (Fri)", "", 1)
+	dayOfWeekRegex := regexp.MustCompile(`\s\([^()]*\)`)
+	dayMonthString := dayOfWeekRegex.ReplaceAllString(day, "")
+
+	monthString := regexp.MustCompile(`^[A-Za-z]+`).FindString(dayMonthString)
+	monthObj, _ := timex.ParseMonth(monthString)
+	monthInt := int(monthObj)
+
+	dayRegex := regexp.MustCompile(`[0-9]+`)
+	dayString := dayRegex.FindString(dayMonthString)
+
+	yearInt := time.Now().Year()
+
+	dateString := fmt.Sprintf("%d-%02d-%s", yearInt, monthInt, dayString)
+
+	return dateString
 }
 
 func createTimeString(time string) string {
-
+	return time
 }
 
 func createTimestamp(day string, time string) int {
