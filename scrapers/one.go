@@ -3,7 +3,10 @@ package scrapers
 import (
 	"fmt"
 	"regexp"
+	"strconv"
+	"strings"
 	"time"
+
 	"github.com/gocolly/colly"
 	"github.com/icza/gox/timex"
 	"github.com/xavier-kong/fight-scraper/types"
@@ -35,6 +38,7 @@ func getEventInfo(url string) types.Event {
 
 	c.OnHTML(".info-content", func(e *colly.HTMLElement) {
 		event.Headline = e.ChildText(".title")
+		fmt.Println(event.Headline)
 
 		e.ForEach(".event-date-time", func(i int, h *colly.HTMLElement) {
 			if (h.ChildText(".timezone") == "ICT") {
@@ -92,17 +96,32 @@ func createDateString(day string) string {
 
 	yearInt := time.Now().Year()
 
-	dateString := fmt.Sprintf("%d-%02d-%s", yearInt, monthInt, dayString)
+	dateString := fmt.Sprintf("%d-%02d-%02s", yearInt, monthInt, dayString)
 
 	return dateString
 }
 
 func createTimeString(time string) string {
-	return time
+	ending := regexp.MustCompile(`AM|PM`).FindString(time)
+	timeString := regexp.MustCompile(`AM|PM`).ReplaceAllString(time, "")
+
+	if len(timeString) == 1 {
+		timeString += ":00"
+	}
+
+	vals := strings.Split(timeString, ":")
+	hourString, minString := vals[0], vals[1]
+
+	hourInt, _ := strconv.Atoi(hourString)
+	hourString = fmt.Sprintf("%02d", hourInt)
+
+	timeString = hourString + ":" + minString + ending
+
+	return timeString
 }
 
 func createTimestamp(day string, time string) int {
-
+	fmt.Println(day, time)
 
 	return 0
 }
