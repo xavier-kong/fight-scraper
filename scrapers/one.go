@@ -9,6 +9,7 @@ import (
 
 	"github.com/gocolly/colly"
 	"github.com/icza/gox/timex"
+	"github.com/araddon/dateparse"
 	"github.com/xavier-kong/fight-scraper/types"
 )
 
@@ -38,14 +39,18 @@ func getEventInfo(url string) types.Event {
 
 	c.OnHTML(".info-content", func(e *colly.HTMLElement) {
 		event.Headline = e.ChildText(".title")
-		fmt.Println(event.Headline)
+		fmt.Println(event.Headline, url)
 
-		e.ForEach(".event-date-time", func(i int, h *colly.HTMLElement) {
-			if (h.ChildText(".timezone") == "ICT") {
-				dateString := createDateString(h.ChildText(".day"))
-				timeString := createTimeString(h.ChildText(".time"))
-				event.TimestampSeconds = createTimestamp(dateString, timeString)
-			}
+		e.ForEachWithBreak(".event-date-time", func(i int, h *colly.HTMLElement) bool {
+			dateString := createDateString(h.ChildText(".day"))
+			timeString := createTimeString(h.ChildText(".time"))
+			timezoneString := h.ChildText(".timezone")
+
+			t, _ := dateparse.ParseAny(fmt.Sprintf("%s %s %s", dateString, timeString, timezoneString))
+
+			event.TimestampSeconds = int(t.UnixMilli()) / 1000
+
+			return false
 		})
 	})
 
@@ -120,8 +125,3 @@ func createTimeString(time string) string {
 	return timeString
 }
 
-func createTimestamp(day string, time string) int {
-	fmt.Println(day, time)
-
-	return 0
-}
