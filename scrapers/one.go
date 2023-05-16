@@ -39,14 +39,15 @@ func getEventInfo(url string) types.Event {
 
 	c.OnHTML(".info-content", func(e *colly.HTMLElement) {
 		event.Headline = e.ChildText(".title")
-		fmt.Println(event.Headline, url)
+		parts := strings.Split(event.Headline, ":")
+		event.Name = strings.ReplaceAll(parts[0], "on Prime Video", "")
 
 		e.ForEachWithBreak(".event-date-time", func(i int, h *colly.HTMLElement) bool {
 			dateString := createDateString(h.ChildText(".day"))
 			timeString := createTimeString(h.ChildText(".time"))
 			timezoneString := h.ChildText(".timezone")
 
-			t, _ := dateparse.ParseAny(fmt.Sprintf("%s %s %s", dateString, timeString, timezoneString))
+			t, err := dateparse.ParseAny(fmt.Sprintf("%s %s %s", dateString, timeString, timezoneString))
 
 			event.TimestampSeconds = int(t.UnixMilli()) / 1000
 
@@ -69,19 +70,27 @@ func fetchOneEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 
 	eventUrls := fetchEventUrls(c)
 
+	todaySecs := int(time.Now().UnixMilli() / 1000)
+
 	for _, url := range(eventUrls) {
 		event := getEventInfo(url)
 
+		if event.TimestampSeconds < todaySecs {
+			fmt.Println(event.Headline, "past")
+			continue
+		}
+
 		existingEventData, exists := existingEvents[event.Name]
 
-		if exists {
-			if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
-			existingEventData.Headline != event.Headline) {
-				event.ID =  existingEventData.ID
-				eventsToUpdate = append(eventsToUpdate, event)
-			}
-		} else {
+		if !exists {
 			newEvents = append(newEvents, event)
+			continue
+		}
+
+		if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
+		existingEventData.Headline != event.Headline) {
+			event.ID =  existingEventData.ID
+			eventsToUpdate = append(eventsToUpdate, event)
 		}
 	}
 
@@ -93,7 +102,7 @@ func createDateString(day string) string {
 	dayMonthString := dayOfWeekRegex.ReplaceAllString(day, "")
 
 	monthString := regexp.MustCompile(`^[A-Za-z]+`).FindString(dayMonthString)
-	monthObj, _ := timex.ParseMonth(monthString)
+	monthObj, err := timex.ParseMonth(monthString)
 	monthInt := int(monthObj)
 
 	dayRegex := regexp.MustCompile(`[0-9]+`)
@@ -117,7 +126,7 @@ func createTimeString(time string) string {
 	vals := strings.Split(timeString, ":")
 	hourString, minString := vals[0], vals[1]
 
-	hourInt, _ := strconv.Atoi(hourString)
+	hourInt, err := strconv.Atoi(hourString)
 	hourString = fmt.Sprintf("%02d", hourInt)
 
 	timeString = hourString + ":" + minString + ending

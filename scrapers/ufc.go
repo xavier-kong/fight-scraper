@@ -52,14 +52,15 @@ func fetchUfcEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 			Org: "ufc",
 		}
 
-		if exists {
-			if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
-			existingEventData.Headline != event.Headline) {
-				event.ID =  existingEventData.ID
-				eventsToUpdate = append(eventsToUpdate, event)
-			}
-		} else {
+		if !exists {
 			newEvents = append(newEvents, event)
+			return
+		}
+
+		if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
+		existingEventData.Headline != event.Headline) {
+			event.ID =  existingEventData.ID
+			eventsToUpdate = append(eventsToUpdate, event)
 		}
 	})
 
