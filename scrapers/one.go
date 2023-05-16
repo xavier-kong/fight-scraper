@@ -6,10 +6,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"github.com/araddon/dateparse"
 	"github.com/gocolly/colly"
 	"github.com/icza/gox/timex"
-	"github.com/araddon/dateparse"
 	"github.com/xavier-kong/fight-scraper/types"
 )
 
@@ -48,6 +47,12 @@ func getEventInfo(url string) types.Event {
 			timezoneString := h.ChildText(".timezone")
 
 			t, err := dateparse.ParseAny(fmt.Sprintf("%s %s %s", dateString, timeString, timezoneString))
+
+			if err != nil { // use future incorrect timestamp that will be updated when scraper runs again
+				fmt.Println("error parsing", dateString, timeString, timezoneString)
+				event.TimestampSeconds = int(time.Now().AddDate(0, 0, 7).UnixMilli() / 1000)
+				return false
+			}
 
 			event.TimestampSeconds = int(t.UnixMilli()) / 1000
 
@@ -103,6 +108,11 @@ func createDateString(day string) string {
 
 	monthString := regexp.MustCompile(`^[A-Za-z]+`).FindString(dayMonthString)
 	monthObj, err := timex.ParseMonth(monthString)
+
+	if err != nil {
+		monthObj, _ = timex.ParseMonth("Jan")
+	}
+
 	monthInt := int(monthObj)
 
 	dayRegex := regexp.MustCompile(`[0-9]+`)
@@ -127,6 +137,11 @@ func createTimeString(time string) string {
 	hourString, minString := vals[0], vals[1]
 
 	hourInt, err := strconv.Atoi(hourString)
+
+	if err != nil {
+		hourInt = 20
+	}
+
 	hourString = fmt.Sprintf("%02d", hourInt)
 
 	timeString = hourString + ":" + minString + ending
