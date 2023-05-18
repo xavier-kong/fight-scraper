@@ -12,7 +12,11 @@ import (
 	"github.com/xavier-kong/fight-scraper/types"
 )
 
-func fetchEventUrls(c *colly.Collector) []string {
+type One struct {}
+
+var one One
+
+func (a One) fetchEventUrls(c *colly.Collector) []string {
 	eventUrls := make([]string, 0)
 
 	c.OnHTML("#upcoming-events-section", func(e *colly.HTMLElement) {
@@ -26,7 +30,7 @@ func fetchEventUrls(c *colly.Collector) []string {
 	return eventUrls;
 }
 
-func getEventInfo(url string) types.Event {
+func (a One) getEventInfo(url string) types.Event {
 	c := colly.NewCollector(
 		colly.AllowedDomains("www.onefc.com"),
 	)
@@ -42,8 +46,8 @@ func getEventInfo(url string) types.Event {
 		event.Name = strings.ReplaceAll(parts[0], "on Prime Video", "")
 
 		e.ForEachWithBreak(".event-date-time", func(i int, h *colly.HTMLElement) bool {
-			dateString := createDateString(h.ChildText(".day"))
-			timeString := createTimeString(h.ChildText(".time"))
+			dateString := one.createDateString(h.ChildText(".day"))
+			timeString := one.createTimeString(h.ChildText(".time"))
 			timezoneString := h.ChildText(".timezone")
 
 			t, err := dateparse.ParseAny(fmt.Sprintf("%s %s %s", dateString, timeString, timezoneString))
@@ -73,12 +77,12 @@ func fetchOneEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	var newEvents []types.Event
 	var eventsToUpdate []types.Event
 
-	eventUrls := fetchEventUrls(c)
+	eventUrls := one.fetchEventUrls(c)
 
 	todaySecs := int(time.Now().UnixMilli() / 1000)
 
 	for _, url := range(eventUrls) {
-		event := getEventInfo(url)
+		event := one.getEventInfo(url)
 
 		if event.TimestampSeconds < todaySecs {
 			fmt.Println(event.Headline, "past")
@@ -102,7 +106,7 @@ func fetchOneEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	return newEvents, eventsToUpdate
 }
 
-func createDateString(day string) string {
+func (a One) createDateString(day string) string {
 	dayOfWeekRegex := regexp.MustCompile(`\s\([^()]*\)`)
 	dayMonthString := dayOfWeekRegex.ReplaceAllString(day, "")
 
@@ -125,7 +129,7 @@ func createDateString(day string) string {
 	return dateString
 }
 
-func createTimeString(time string) string {
+func (a One) createTimeString(time string) string {
 	ending := regexp.MustCompile(`AM|PM`).FindString(time)
 	timeString := regexp.MustCompile(`AM|PM`).ReplaceAllString(time, "")
 
