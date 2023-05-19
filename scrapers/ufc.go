@@ -18,7 +18,8 @@ func fetchUfcEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 
 	todaySecs := int(time.Now().UnixMilli() / 1000)
 
-	var newEvents []types.Event var eventsToUpdate []types.Event
+	var newEvents []types.Event
+	var eventsToUpdate []types.Event
 	c.OnHTML(".c-card-event--result__info", func(e *colly.HTMLElement) {
 		eventHeadline := e.ChildText(".c-card-event--result__headline")
 
@@ -38,7 +39,10 @@ func fetchUfcEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 
 		eventUrl := "https://www.ufc.com" + eventUrlPath
 
-		eventName := convertUrlToEventName(eventUrlPath)
+		res := strings.ReplaceAll(eventUrlPath, "/event/ufc", "UFC")
+		res = strings.ReplaceAll(res, "-", " ")
+		c := cases.Title(language.English, cases.NoLower)
+		eventName := c.String(res)
 
 		existingEventData, exists := existingEvents[eventName]
 
@@ -65,11 +69,4 @@ func fetchUfcEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	c.Visit("https://www.ufc.com/events#events-list-upcoming")
 
 	return newEvents, eventsToUpdate
-}
-
-func convertUrlToEventName(url string) string {
-	res := strings.ReplaceAll(url, "/event/ufc", "UFC")
-	res = strings.ReplaceAll(res, "-", " ")
-	c := cases.Title(language.English, cases.NoLower)
-	return c.String(res)
 }
