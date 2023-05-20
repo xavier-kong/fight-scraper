@@ -20,10 +20,12 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	var newEvents []types.Event
 	var eventsToUpdate []types.Event
 
-	c.OnHTML(".row", func(e *colly.HTMLElement) {
-
-
-
+	c.OnHTML(".container", func(e *colly.HTMLElement) {
+		e.ForEach(".row.py-4", func(i int, h *colly.HTMLElement) {
+			h.ForEach("p.font-oswald.font-weight-bold.m-0", func(i int, j *colly.HTMLElement) {
+				fmt.Println(j.Text)
+			})
+		})
 	})
 
 	c.Visit(fmt.Sprintf("https://www.pflmma.com/season/%d", time.Now().Year()))

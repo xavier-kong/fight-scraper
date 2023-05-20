@@ -1,8 +1,8 @@
 package scrapers
 
 import (
-	"fmt"
-	"time"
+	//"fmt"
+	//"time"
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"
 )
@@ -24,20 +24,20 @@ func (a Org) fetchEventUrls(c *colly.Collector) []string {
 }
 
 func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, []types.Event) {
-	c := colly.NewCollector(
+	/*c := colly.NewCollector(
 		colly.AllowedDomains("www.bellator.com"),
-	)
+	)*/
 
 	var newEvents []types.Event
 	var eventsToUpdate []types.Event
 
-	var a Org
+	//var a Org
 
-	eventUrls := a.fetchEventUrls(c)
+	//eventUrls := a.fetchEventUrls(c)
 
-	todaySecs := int(time.Now().UnixMilli() / 1000)
+	//todaySecs := int(time.Now().UnixMilli() / 1000)
 
-	for _, url := range(eventUrls) {
+	/*for _, url := range(eventUrls) {
 		event := getEventInfo(url)
 
 		if event.TimestampSeconds < todaySecs {
@@ -57,7 +57,7 @@ func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, 
 			event.ID =  existingEventData.ID
 			eventsToUpdate = append(eventsToUpdate, event)
 		}
-	}
+	}*/
 
 	return newEvents, eventsToUpdate
 }
