@@ -2,8 +2,10 @@ package scrapers
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/araddon/dateparse"
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"
 )
@@ -23,7 +25,16 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	c.OnHTML(".container", func(e *colly.HTMLElement) {
 		e.ForEach(".row.py-4", func(i int, h *colly.HTMLElement) {
 			h.ForEach("p.font-oswald.font-weight-bold.m-0", func(i int, j *colly.HTMLElement) {
-				fmt.Println(j.Text)
+				parts := strings.Split(j.Text, " |")
+				t, err := dateparse.ParseAny(parts[0])
+				fmt.Println("pre", parts[0])
+
+				if err != nil {
+					fmt.Println("err", err)
+				}
+
+				fmt.Println("post", t.Year(), t.Month(), t.Day())
+
 			})
 		})
 	})
@@ -33,3 +44,7 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	return newEvents, eventsToUpdate
 }
 
+func (p Pfl) getTimestamp(date string) int {
+
+
+}
