@@ -25,16 +25,15 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	c.OnHTML(".container", func(e *colly.HTMLElement) {
 		e.ForEach(".row.py-4", func(i int, h *colly.HTMLElement) {
 			h.ForEach("p.font-oswald.font-weight-bold.m-0", func(i int, j *colly.HTMLElement) {
-				parts := strings.Split(j.Text, " |")
-				t, err := dateparse.ParseAny(parts[0])
-				fmt.Println("pre", parts[0])
+				parts := strings.Split(j.Text, " | ")
 
-				if err != nil {
-					fmt.Println("err", err)
+				if len(parts) != 3 { // past
+					return
 				}
 
-				fmt.Println("post", t.Year(), t.Month(), t.Day())
-
+				timeString := strings.Replace(parts[2], "ESPN ", "", -1)
+				timestamp := pfl.getTimestamp(parts[0], timeString)
+				fmt.Println(timestamp)
 			})
 		})
 	})
@@ -44,7 +43,9 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	return newEvents, eventsToUpdate
 }
 
-func (p Pfl) getTimestamp(date string) int {
+func (p Pfl) getTimestamp(date string, time string) int {
+	fmt.Println(date, time)
+	_, err := dateparse.ParseAny(fmt.Sprintf("%s %s", date, time))
 
-
+	return 0
 }
