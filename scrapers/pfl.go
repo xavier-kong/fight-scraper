@@ -2,6 +2,7 @@ package scrapers
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -22,6 +23,8 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	var newEvents []types.Event
 	var eventsToUpdate []types.Event
 
+	todaySecs := int(time.Now().UnixMilli() / 1000)
+
 	c.OnHTML(".container", func(e *colly.HTMLElement) {
 		e.ForEach(".row.py-4", func(i int, h *colly.HTMLElement) {
 			h.ForEach("p.font-oswald.font-weight-bold.m-0", func(i int, j *colly.HTMLElement) {
@@ -31,9 +34,12 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 					return
 				}
 
-				timeString := strings.Replace(parts[2], "ESPN ", "", -1)
-				timestamp := pfl.getTimestamp(parts[0], timeString)
-				fmt.Println(timestamp)
+				timestamp := pfl.getTimestamp(parts[0],  strings.Replace(parts[2], "ESPN ", "", -1))
+
+				if timestamp < todaySecs { // past
+					return
+				}
+
 			})
 		})
 	})
@@ -44,8 +50,12 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 }
 
 func (p Pfl) getTimestamp(date string, time string) int {
-	fmt.Println(date, time)
-	_, err := dateparse.ParseAny(fmt.Sprintf("%s %s", date, time))
+	date = regexp.MustCompile(`Monday |Tuesday |Wednesday |Thursday |Friday |Saturday |Sunday `).ReplaceAllString(date, "")
+	ts, err := dateparse.ParseAny(fmt.Sprintf("%s %s", date, strings.Replace(time, "PM", ":00PM", -1)))
 
-	return 0
+	if err != nil {
+		handleError(err)
+	}
+
+	return int(ts.UnixMilli()) / 1000
 }
