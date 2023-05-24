@@ -27,20 +27,22 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 
 	c.OnHTML(".container", func(e *colly.HTMLElement) {
 		e.ForEach(".row.py-4", func(i int, h *colly.HTMLElement) {
-			h.ForEach("p.font-oswald.font-weight-bold.m-0", func(i int, j *colly.HTMLElement) {
-				parts := strings.Split(j.Text, " | ")
+			dateTimeString := h.ChildText("p.font-oswald.font-weight-bold.m-0")
+			parts := strings.Split(dateTimeString, " | ")
 
-				if len(parts) != 3 { // past
-					return
-				}
+			if len(parts) != 3 { // past return
+			}
 
-				timestamp := pfl.getTimestamp(parts[0],  strings.Replace(parts[2], "ESPN ", "", -1))
+			timestamp := pfl.getTimestamp(parts[0],  strings.Replace(parts[2], "ESPN ", "", -1))
 
-				if timestamp < todaySecs { // past
-					return
-				}
+			if timestamp < todaySecs { // past
+				return
+			}
 
-			})
+			eventName := h.ChildText("p.text-red.font-weight-bold.m-0")
+
+			fmt.Println(eventName)
+
 		})
 	})
 
