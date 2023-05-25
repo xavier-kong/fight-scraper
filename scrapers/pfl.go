@@ -9,6 +9,8 @@ import (
 	"github.com/araddon/dateparse"
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type Pfl struct {}
@@ -31,6 +33,7 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 			parts := strings.Split(dateTimeString, " | ")
 
 			if len(parts) != 3 { // past return
+				return
 			}
 
 			timestamp := pfl.getTimestamp(parts[0],  strings.Replace(parts[2], "ESPN ", "", -1))
@@ -39,9 +42,19 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 				return
 			}
 
-			eventName := h.ChildText("p.text-red.font-weight-bold.m-0")
+			eventNameString := strings.ToLower(h.ChildText("p.text-red.font-weight-bold.m-0"))
+			eventName := cases.Title(language.English, cases.NoLower).String(eventNameString)
+			eventUrl := h.ChildAttr("a", "href")
 
-			fmt.Println(eventName)
+			event := types.Event {
+				TimestampSeconds: timestamp,
+				Name: eventName,
+				Headline: eventName,
+				Url: eventUrl,
+				Org: "pfl",
+			}
+
+			fmt.Println(event)
 
 		})
 	})
