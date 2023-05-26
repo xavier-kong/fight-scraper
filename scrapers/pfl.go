@@ -54,8 +54,15 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 				Org: "pfl",
 			}
 
-			fmt.Println(event)
+			existingEventData, exists := existingEvents[event.Name]
 
+			if !exists {
+				newEvents = append(newEvents, event)
+			} else if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
+			existingEventData.Headline != event.Headline) {
+				event.ID =  existingEventData.ID
+				eventsToUpdate = append(eventsToUpdate, event)
+			}
 		})
 	})
 
