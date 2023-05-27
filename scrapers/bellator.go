@@ -7,9 +7,9 @@ import (
 	"github.com/xavier-kong/fight-scraper/types"
 )
 
-type Org struct {}
+type Bell struct {}
 
-func (a Org) fetchEventUrls(c *colly.Collector) []string {
+func (a Bell) fetchEventUrls(c *colly.Collector) []string {
 	eventUrls := make([]string, 0)
 
 	c.OnHTML("#upcoming-events-section", func(e *colly.HTMLElement) {
@@ -18,7 +18,7 @@ func (a Org) fetchEventUrls(c *colly.Collector) []string {
 		})
 	})
 
-	c.Visit("https://www.onefc.com/events")
+	c.Visit("https://www.bellator.com/events")
 
 	return eventUrls;
 }

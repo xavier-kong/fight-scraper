@@ -6,15 +6,8 @@ import (
 )
 
 func FetchNewEvents(existingEvents map[string]map[string]types.Event) (newEvents []types.Event, eventsToUpdate []types.Event) {
-	/*ufcNewEvents, ufcEventsToUpdate := fetchUfcEvents(existingEvents["ufc"])
-	newEvents = append(newEvents , ufcNewEvents...)
-	eventsToUpdate = append(eventsToUpdate, ufcEventsToUpdate...)
+	fetchBkfcEvents(existingEvents["bkfc"])
 
-	oneNewEvents, oneEventsToUpdate := fetchOneEvents(existingEvents["one"])
-	newEvents = append(newEvents, oneNewEvents...)
-	eventsToUpdate = append(eventsToUpdate, oneEventsToUpdate...)*/
-
-	fetchPflEvents(existingEvents["pfl"])
 	return;
 }
 
