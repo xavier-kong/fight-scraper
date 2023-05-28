@@ -19,6 +19,8 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 	var newEvents []types.Event
 	var eventsToUpdate []types.Event
 
+	eventTimestamps := getEventTimestamps()
+
 	c := colly.NewCollector(
 		colly.AllowedDomains("www.bkfc.com"),
 	)
@@ -35,30 +37,19 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 
 				event.Url = fmt.Sprintf("https://www.bkfc.com%s", eventHeader.ChildAttr("a", "href"))
 
-				event.TimestampSeconds = bkfc.fetchTimestamp(event.Url)
+
+
 			})
+
+			fmt.Println(event)
 		})
 	})
 
 	c.Visit("https://www.bkfc.com/events")
 
-
 	return newEvents, eventsToUpdate
 }
 
-func (bkfc Bkfc) fetchTimestamp(url string) int {
-	fmt.Println(url)
-	ts := 0
+func getEventTimestamps() map[string]int {
 
-	c := colly.NewCollector(
-		colly.AllowedDomains("www.bkfc.com"),
-	)
-
-	c.OnHTML(".events-show-rails-date-im-timezone", func(dateHeader *colly.HTMLElement) {
-		fmt.Println(dateHeader.Request)
-	})
-
-	c.Visit(url)
-
-	return ts
 }
