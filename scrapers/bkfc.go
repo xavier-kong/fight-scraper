@@ -2,10 +2,13 @@ package scrapers
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
+
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/araddon/dateparse"
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"
 )
@@ -20,6 +23,8 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 	var eventsToUpdate []types.Event
 
 	eventTimestamps := getEventTimestamps()
+
+	fmt.Println(eventTimestamps)
 
 	c := colly.NewCollector(
 		colly.AllowedDomains("www.bkfc.com"),
@@ -51,5 +56,35 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 }
 
 func getEventTimestamps() map[string]int {
+	c := colly.NewCollector(
+		colly.AllowedDomains("www.itnwwe.com"),
+	)
 
+	tsMap := make(map[string]int)
+
+	c.OnHTML("tbody", func(h *colly.HTMLElement) {
+		h.ForEach("tr", func(i int, row *colly.HTMLElement) {
+			timeString := row.ChildText("td:nth-child(4)")
+
+			if timeString == "" {
+				return
+			}
+
+			eventNumber := regexp.MustCompile(`\d+`).FindString(row.ChildText("td:nth-child(2)"))
+			dateTimeString := fmt.Sprintf("%s %s", row.ChildText("td:nth-child(1)"), strings.ReplaceAll(timeString, "8:00", "08:00"))
+
+			ts, err := dateparse.ParseAny(dateTimeString)
+
+			if err != nil {
+				handleError(err)
+			}
+
+
+			fmt.Println("date", ts, eventNumber)
+		})
+	})
+
+	c.Visit("https://www.itnwwe.com/mma/bkfc-events-schedule/")
+
+	return tsMap
 }

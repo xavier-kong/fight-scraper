@@ -50,6 +50,8 @@ func (a One) getEventInfo(url string) types.Event {
 			timeString := one.createTimeString(h.ChildText(".time"))
 			timezoneString := h.ChildText(".timezone")
 
+			fmt.Printf("%s %s %s\n", dateString, timeString, timezoneString)
+
 			t, err := dateparse.ParseAny(fmt.Sprintf("%s %s %s", dateString, timeString, timezoneString))
 
 			if err != nil { // use future incorrect timestamp that will be updated when scraper runs again
