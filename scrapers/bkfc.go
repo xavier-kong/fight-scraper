@@ -11,6 +11,7 @@ import (
 	"github.com/araddon/dateparse"
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"
+	"time"
 )
 
 type Bkfc struct {}
@@ -22,7 +23,7 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 	var newEvents []types.Event
 	var eventsToUpdate []types.Event
 
-	eventTimestamps := getEventTimestamps()
+	eventTimestamps := bkfc.getEventTimestamps()
 
 	fmt.Println(eventTimestamps)
 
@@ -43,7 +44,6 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 				event.Url = fmt.Sprintf("https://www.bkfc.com%s", eventHeader.ChildAttr("a", "href"))
 
 
-
 			})
 
 			fmt.Println(event)
@@ -55,7 +55,7 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 	return newEvents, eventsToUpdate
 }
 
-func getEventTimestamps() map[string]int {
+func (b Bkfc) getEventTimestamps() map[string]int {
 	c := colly.NewCollector(
 		colly.AllowedDomains("www.itnwwe.com"),
 	)
@@ -71,20 +71,51 @@ func getEventTimestamps() map[string]int {
 			}
 
 			eventNumber := regexp.MustCompile(`\d+`).FindString(row.ChildText("td:nth-child(2)"))
-			dateTimeString := fmt.Sprintf("%s %s", row.ChildText("td:nth-child(1)"), strings.ReplaceAll(timeString, "8:00", "08:00"))
+			dateStringParts := strings.Split(row.ChildText("td:nth-child(1)"), " ")
+			day, monthStr, year := dateStringParts[0], dateStringParts[1], dateStringParts[2]
+			monthInt := bkfc.monthNameToInt(monthStr)
+			dateTimeString := fmt.Sprintf("%s-%02d-%s %s", year, monthInt, day, timeString)
+
+			fmt.Println(eventNumber, dateTimeString)
 
 			ts, err := dateparse.ParseAny(dateTimeString)
 
 			if err != nil {
-				handleError(err)
+				fmt.Println("error parsing", dateTimeString)
+				tsMap[eventNumber] = int(time.Now().AddDate(0, 0, 7).UnixMilli()) / 1000
+				return
 			}
 
-
-			fmt.Println("date", ts, eventNumber)
+			tsMap[eventNumber] = int(ts.UnixMilli()) / 1000
 		})
 	})
 
 	c.Visit("https://www.itnwwe.com/mma/bkfc-events-schedule/")
 
 	return tsMap
+}
+
+func (b Bkfc) monthNameToInt(month string) int {
+	nameInt := map[string]int {
+		"january": 1,
+		"february": 2,
+		"march": 3,
+		"april": 4,
+		"may": 5,
+		"june": 6,
+		"july": 7,
+		"august": 8,
+		"september": 9,
+		"october": 10,
+		"november": 11,
+		"december": 12,
+	}
+
+	val, exists := nameInt[month]
+
+	if !exists {
+		val = 1
+	}
+
+	return val
 }
