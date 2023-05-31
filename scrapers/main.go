@@ -1,14 +1,13 @@
 package scrapers
 
 import (
-	"github.com/xavier-kong/fight-scraper/types"
 	"log"
+
+	"github.com/xavier-kong/fight-scraper/types"
 )
 
 func FetchNewEvents(existingEvents map[string]map[string]types.Event) (newEvents []types.Event, eventsToUpdate []types.Event) {
 
-	fetchOneEvents(existingEvents["one"])
-	fetchBkfcEvents(existingEvents["bkfc"])
 
 	return;
 }

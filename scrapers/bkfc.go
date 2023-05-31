@@ -24,8 +24,7 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 	var eventsToUpdate []types.Event
 
 	eventTimestamps := bkfc.getEventTimestamps()
-
-	fmt.Println(eventTimestamps)
+	todaySecs := int(time.Now().UnixMilli() / 1000)
 
 	c := colly.NewCollector(
 		colly.AllowedDomains("www.bkfc.com"),
@@ -36,17 +35,43 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 			event := types.Event { Org: "bfkc" }
 
 			eventCard.ForEach(".card-text-events", func(i int, eventHeader *colly.HTMLElement) {
-				eventNameString := strings.ToLower(eventHeader.ChildAttr("a", "title"))
-				eventNameStringCased := cases.Title(language.English, cases.NoLower).String(eventNameString)
-				event.Name = strings.Replace(eventNameStringCased, "Bkfc", "BKFC", -1)
-				event.Headline = event.Name
+				eventHeadlineString := strings.ToLower(eventHeader.ChildAttr("a", "title"))
+				eventHeadlineStringCased := cases.Title(language.English, cases.NoLower).String(eventHeadlineString)
+				event.Headline = strings.Replace(eventHeadlineStringCased, "Bkfc", "BKFC", -1)
+
+				eventNumber := regexp.MustCompile(`\d+`).FindString(event.Headline)
+				event.Name = fmt.Sprintf("BKFC %s", eventNumber)
 
 				event.Url = fmt.Sprintf("https://www.bkfc.com%s", eventHeader.ChildAttr("a", "href"))
 
+				eventTs, exist := eventTimestamps[eventNumber]
 
+				if !exist { // use future incorrect timestamp that will be updated when scraper runs again
+					fmt.Println("no ts for ", eventNumber)
+					eventTs = int(time.Now().AddDate(0, 0, 7).UnixMilli() / 1000)
+				}
+
+				event.TimestampSeconds = eventTs
 			})
 
-			fmt.Println(event)
+			if event.TimestampSeconds < todaySecs {
+				fmt.Println(event.Headline , " past")
+				return
+			}
+
+
+			existingEventData, exists := existingEvents[event.Name]
+
+			if !exists {
+				newEvents = append(newEvents, event)
+				return
+			}
+
+			if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
+			existingEventData.Headline != event.Headline) {
+				event.ID =  existingEventData.ID
+				eventsToUpdate = append(eventsToUpdate, event)
+			}
 		})
 	})
 
@@ -73,10 +98,8 @@ func (b Bkfc) getEventTimestamps() map[string]int {
 			eventNumber := regexp.MustCompile(`\d+`).FindString(row.ChildText("td:nth-child(2)"))
 			dateStringParts := strings.Split(row.ChildText("td:nth-child(1)"), " ")
 			day, monthStr, year := dateStringParts[0], dateStringParts[1], dateStringParts[2]
-			monthInt := bkfc.monthNameToInt(monthStr)
+			monthInt := bkfc.monthNameToInt(strings.ToLower(monthStr))
 			dateTimeString := fmt.Sprintf("%s-%02d-%s %s", year, monthInt, day, timeString)
-
-			fmt.Println(eventNumber, dateTimeString)
 
 			ts, err := dateparse.ParseAny(dateTimeString)
 
