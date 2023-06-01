@@ -7,6 +7,7 @@ import (
 )
 
 func FetchNewEvents(existingEvents map[string]map[string]types.Event) (newEvents []types.Event, eventsToUpdate []types.Event) {
+	fetchBellatorEvents(existingEvents["bellator"])
 
 
 	return;
