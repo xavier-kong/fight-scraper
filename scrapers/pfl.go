@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-
 	"github.com/araddon/dateparse"
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"

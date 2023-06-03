@@ -23,8 +23,9 @@ func main() {
 	existingEvents := createExistingEventsMap()
 	scrapers.FetchNewEvents(existingEvents)
 	//newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
-	//go writeNewEventsToDb(Database, newEvents)
-	//go updateExistingEvents(Database, eventsToUpdate)
+	/*go writeNewEventsToDb(newEvents)
+	go updateExistingEvents(eventsToUpdate)
+	go logScrape()*/
 }
 
 func handleError(err error) {

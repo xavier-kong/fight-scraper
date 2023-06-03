@@ -24,9 +24,7 @@ func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, 
 
 	var newEvents []types.Event
 	var eventsToUpdate []types.Event
-	/*var a Bell
-
-	todaySecs := int(time.Now().UnixMilli() / 1000)*/
+	//var a Bell todaySecs := int(time.Now().UnixMilli() / 1000)
 
 	c.OnHTML(".page-container", func(container *colly.HTMLElement) {
 		container.ForEachWithBreak("tbody.Table__TBODY", func(i int, table *colly.HTMLElement) bool {
@@ -39,7 +37,7 @@ func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, 
 				}
 
 				dateString := fmt.Sprintf("%s %d", row.ChildText("td:nth-child(1)"), currDate.Year())
-				timeString := fmt.Sprintf("%s UTC+08", row.ChildText("td:nth-child(2)"))
+				timeString := fmt.Sprintf("%s GMT+0800", row.ChildText("td:nth-child(2)"))
 
 				ts, err := dateparse.ParseAny(fmt.Sprintf("%s %s", dateString, timeString))
 
@@ -47,10 +45,27 @@ func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, 
 					fmt.Println(err)
 				}
 
-				fmt.Println(ts)
+				event.TimestampSeconds = int(ts.UnixMilli()) / 1000
 
-				fmt.Println(event)
+				if event.TimestampSeconds < todaySecs {
+					fmt.Println(event.Headline, " past")
+					return
+				}
+
+				existingEventData, exists := existingEvents[event.Name]
+
+				if !exists {
+					newEvents = append(newEvents, event)
+					return
+				}
+
+				if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
+				existingEventData.Headline != event.Headline) {
+					event.ID =  existingEventData.ID
+					eventsToUpdate = append(eventsToUpdate, event)
+				}
 			})
+
 			return false
 		})
 	})
