@@ -21,11 +21,10 @@ func main() {
 	createDbClient()
 
 	existingEvents := createExistingEventsMap()
-	scrapers.FetchNewEvents(existingEvents)
-	//newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
-	/*go writeNewEventsToDb(newEvents)
-	go updateExistingEvents(eventsToUpdate)
-	go logScrape()*/
+	newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
+	writeNewEventsToDb(newEvents)
+	updateExistingEvents(eventsToUpdate)
+	logScrape(len(newEvents), len(eventsToUpdate))
 }
 
 func handleError(err error) {
@@ -95,5 +94,20 @@ func writeNewEventsToDb(events []types.Event) {
 func updateExistingEvents(eventsToUpdate []types.Event) {
 	for _, event := range eventsToUpdate {
 		Database.Save(&event)
+	}
+}
+
+func logScrape(numNewEvents int, numEventsToUpdate int) {
+	log := types.Log {
+		Type: fmt.Sprintf("found %d new events and updated %d events", numNewEvents, numEventsToUpdate),
+		TimestampSeconds: int(time.Now().UnixMilli()) / 1000,
+	}
+
+	result := Database.Create(&log)
+
+	if (result.Error != nil) {
+		handleError(result.Error)
+	} else {
+		fmt.Println("logged at ", log.TimestampSeconds)
 	}
 }

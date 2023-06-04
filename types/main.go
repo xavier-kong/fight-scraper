@@ -8,3 +8,9 @@ type Event struct {
 	Url string `gorm:"size: 255; not null;" json:"url"`
 	Org string `gorm:"size: 255; not null;" json:"org"`
 }
+
+type Log struct {
+	ID uint
+	Type string `gorm:"size: 255; not null;" json:"type"`
+	TimestampSeconds int `gorm:"type: numeric; not null;" json:"timestamp_seconds"`
+}

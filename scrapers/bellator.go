@@ -24,7 +24,7 @@ func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, 
 
 	var newEvents []types.Event
 	var eventsToUpdate []types.Event
-	//var a Bell todaySecs := int(time.Now().UnixMilli() / 1000)
+	todaySecs := int(time.Now().UnixMilli() / 1000)
 
 	c.OnHTML(".page-container", func(container *colly.HTMLElement) {
 		container.ForEachWithBreak("tbody.Table__TBODY", func(i int, table *colly.HTMLElement) bool {
