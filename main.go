@@ -11,20 +11,57 @@ import (
 	"gorm.io/gorm"
 	"github.com/xavier-kong/fight-scraper/types"
 	"github.com/xavier-kong/fight-scraper/scrapers"
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 )
-
 
 var Database *gorm.DB
 
-func main() {
-	loadEnv()
-	createDbClient()
+func ComputeExpectedSHA256Hash(data []byte) string {
+	secret := os.Getenv("FIGHT_SCRAPER_SECRET")
 
-	existingEvents := createExistingEventsMap()
-	newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
-	writeNewEventsToDb(newEvents)
-	updateExistingEvents(eventsToUpdate)
-	logScrape(len(newEvents), len(eventsToUpdate))
+	if secret == "" {
+		fmt.Println("Error: no secret found")
+		return ""
+	}
+
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(data)
+
+	return "sha256=" + hex.EncodeToString(mac.Sum(nil))
+}
+
+func verifyOrigin(req *events.LambdaFunctionURLRequest) bool {
+	isVerified := false;
+
+	var token string
+
+	token, ok := req.Headers["my-precious-token"]
+
+	if !ok || len(token) == 0 {
+		fmt.Println("Error: no token found in header")
+	}
+
+	expectedHash := ComputeExpectedSHA256Hash([]byte(req.Body))
+
+	if expectedHash == "" {
+		fmt.Println("Error: no hash calculated")
+		return isVerified
+	}
+
+	isVerified = hmac.Equal([]byte(token), []byte(expectedHash))
+
+	if !isVerified {
+		fmt.Println("hashes are not equal")
+	} else {
+		fmt.Println("signature has been verified")
+	}
+
+	return isVerified
 }
 
 func handleError(err error) {
@@ -110,4 +147,27 @@ func logScrape(numNewEvents int, numEventsToUpdate int) {
 	} else {
 		fmt.Println("logged at ", log.TimestampSeconds)
 	}
+}
+
+func handleRequest(ctx context.Context, req events.LambdaFunctionURLRequest) (string, error) {
+	isVerified := verifyOrigin(&req)
+
+	if isVerified == false {
+		return "verification error", nil
+	}
+
+	loadEnv()
+	createDbClient()
+
+	existingEvents := createExistingEventsMap()
+	newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
+	writeNewEventsToDb(newEvents)
+	updateExistingEvents(eventsToUpdate)
+	logScrape(len(newEvents), len(eventsToUpdate))
+
+	return "done", nil
+}
+
+func main() {
+	lambda.Start(handleRequest)
 }
