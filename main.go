@@ -14,46 +14,28 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 )
 
 var Database *gorm.DB
 
-func ComputeExpectedSHA256Hash(data []byte) string {
-	secret := os.Getenv("FIGHT_SCRAPER_SECRET")
-
-	if secret == "" {
-		fmt.Println("Error: no secret found")
-		return ""
-	}
-
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(data)
-
-	return "sha256=" + hex.EncodeToString(mac.Sum(nil))
-}
-
 func verifyOrigin(req *events.LambdaFunctionURLRequest) bool {
 	isVerified := false;
-
-	var token string
 
 	token, ok := req.Headers["my-precious-token"]
 
 	if !ok || len(token) == 0 {
 		fmt.Println("Error: no token found in header")
+		return false
 	}
 
-	expectedHash := ComputeExpectedSHA256Hash([]byte(req.Body))
+	secret := os.Getenv("FIGHT_SCRAPER_SECRET")
 
-	if expectedHash == "" {
-		fmt.Println("Error: no hash calculated")
-		return isVerified
+	if secret == "" {
+		fmt.Println("no secret found")
+		return false
 	}
 
-	isVerified = hmac.Equal([]byte(token), []byte(expectedHash))
+	isVerified = token == secret
 
 	if !isVerified {
 		fmt.Println("hashes are not equal")
