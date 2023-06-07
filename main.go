@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	"time"
-	"github.com/joho/godotenv"
+	//"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"github.com/xavier-kong/fight-scraper/types"
@@ -50,11 +50,11 @@ func handleError(err error) {
 	log.Fatal(err)
 }
 
-func loadEnv() {
+/*func loadEnv() {
 	if err := godotenv.Load(".env"); err != nil {
 		handleError(errors.New("error loading .env file"))
 	}
-}
+}*/
 
 func createDbClient() {
 	var err error
@@ -131,15 +131,40 @@ func logScrape(numNewEvents int, numEventsToUpdate int) {
 	}
 }
 
+func checkRecentScrape() bool {
+	recentScrape := false
+	var logs []types.Log
+	currTimeSecs := int(time.Now().UnixMilli() / 1000)
+	oneHourBefore := currTimeSecs - 3600
+
+	res := Database.Where("timestamp_seconds > ?", oneHourBefore).Find(&logs)
+
+	if res.Error != nil {
+		handleError(res.Error)
+	}
+
+	if len(logs) > 0 {
+		recentScrape = true
+	} else {
+		fmt.Println("no recent scrape...ready to rumble")
+	}
+
+	return recentScrape
+}
+
 func handleRequest(ctx context.Context, req events.LambdaFunctionURLRequest) (string, error) {
 	isVerified := verifyOrigin(&req)
 
 	if isVerified == false {
-		return "verification error", nil
+		return "", errors.New("verification error")
 	}
 
-	loadEnv()
+	//loadEnv()
 	createDbClient()
+
+	if recentScrape := checkRecentScrape(); recentScrape {
+		return "", errors.New("already run recently...something is fishy here")
+	}
 
 	existingEvents := createExistingEventsMap()
 	newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
