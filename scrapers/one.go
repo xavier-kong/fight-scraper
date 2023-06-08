@@ -6,13 +6,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/araddon/dateparse"
 	"github.com/gocolly/colly"
 	"github.com/icza/gox/timex"
 	"github.com/xavier-kong/fight-scraper/types"
 )
 
-type One struct {}
+type One struct{}
 
 var one One
 
@@ -27,9 +28,8 @@ func (a One) fetchEventUrls(c *colly.Collector) []string {
 
 	c.Visit("https://www.onefc.com/events")
 
-	return eventUrls;
+	return eventUrls
 }
-
 func (a One) getEventInfo(url string) types.Event {
 	c := colly.NewCollector(
 		colly.AllowedDomains("www.onefc.com"),
@@ -37,7 +37,7 @@ func (a One) getEventInfo(url string) types.Event {
 
 	event := types.Event{
 		Url: url,
-		Org: "onefc",
+		Org: "one",
 	}
 
 	c.OnHTML(".info-content", func(e *colly.HTMLElement) {
@@ -51,7 +51,6 @@ func (a One) getEventInfo(url string) types.Event {
 			timezoneString := h.ChildText(".timezone")
 
 			t, err := dateparse.ParseAny(fmt.Sprintf("%s %s %s", dateString, timeString, timezoneString))
-
 			if err != nil { // use future incorrect timestamp that will be updated when scraper runs again
 				fmt.Println("error parsing", dateString, timeString, timezoneString)
 				event.TimestampSeconds = int(time.Now().AddDate(0, 0, 7).UnixMilli() / 1000)
@@ -81,7 +80,7 @@ func fetchOneEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 
 	todaySecs := int(time.Now().UnixMilli() / 1000)
 
-	for _, url := range(eventUrls) {
+	for _, url := range eventUrls {
 		event := one.getEventInfo(url)
 
 		if event.TimestampSeconds < todaySecs {
@@ -96,9 +95,9 @@ func fetchOneEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 			continue
 		}
 
-		if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
-		existingEventData.Headline != event.Headline) {
-			event.ID =  existingEventData.ID
+		if existingEventData.TimestampSeconds != event.TimestampSeconds ||
+			existingEventData.Headline != event.Headline {
+			event.ID = existingEventData.ID
 			eventsToUpdate = append(eventsToUpdate, event)
 		}
 	}
@@ -112,7 +111,6 @@ func (a One) createDateString(day string) string {
 
 	monthString := regexp.MustCompile(`^[A-Za-z]+`).FindString(dayMonthString)
 	monthObj, err := timex.ParseMonth(monthString)
-
 	if err != nil {
 		monthObj, _ = timex.ParseMonth("Jan")
 	}
@@ -141,7 +139,6 @@ func (a One) createTimeString(time string) string {
 	hourString, minString := vals[0], vals[1]
 
 	hourInt, err := strconv.Atoi(hourString)
-
 	if err != nil {
 		hourInt = 20
 	}
@@ -152,4 +149,3 @@ func (a One) createTimeString(time string) string {
 
 	return timeString
 }
-

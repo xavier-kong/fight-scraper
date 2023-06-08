@@ -31,7 +31,7 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 
 	c.OnHTML(".row.card-module", func(upcomingContainer *colly.HTMLElement) {
 		upcomingContainer.ForEach("div.col-12.col-lg-4.mb-3", func(i int, eventCard *colly.HTMLElement) {
-			event := types.Event{Org: "bfkc"}
+			event := types.Event{Org: "bkfc"}
 
 			eventCard.ForEach(".card-text-events", func(i int, eventHeader *colly.HTMLElement) {
 				eventHeadlineString := strings.ToLower(eventHeader.ChildAttr("a", "title"))
@@ -105,8 +105,6 @@ func (b Bkfc) getEventTimestamps() map[string]int {
 				tsMap[eventNumber] = int(time.Now().AddDate(0, 0, 7).UnixMilli()) / 1000
 				return
 			}
-
-			fmt.Println(dateTimeString, eventNumber, tsMap[eventNumber])
 
 			tsMap[eventNumber] = int(ts.UnixMilli()) / 1000
 		})

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time" //"github.com/joho/godotenv"
-
+	"time"
+	"github.com/joho/godotenv"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/xavier-kong/fight-scraper/scrapers"
@@ -50,11 +50,11 @@ func handleError(err error) {
 	log.Fatal(err)
 }
 
-/*func loadEnv() {
+func loadEnv() {
 	if err := godotenv.Load(".env"); err != nil {
 		handleError(errors.New("error loading .env file"))
 	}
-}*/
+}
 
 func createDbClient() {
 	var err error
@@ -159,12 +159,12 @@ func handleRequest(ctx context.Context, req events.LambdaFunctionURLRequest) (st
 		return "", errors.New("verification error")
 	}
 
-	// loadEnv()
+	//loadEnv()
 	createDbClient()
 
-	/*if recentScrape := checkRecentScrape(); recentScrape {
+	if recentScrape := checkRecentScrape(); recentScrape {
 		return "", errors.New("already run recently...something is fishy here")
-	}*/
+	}
 
 	existingEvents := createExistingEventsMap()
 	newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
@@ -176,5 +176,5 @@ func handleRequest(ctx context.Context, req events.LambdaFunctionURLRequest) (st
 }
 
 func main() {
-	lambda.Start(handleRequest)
+	 lambda.Start(handleRequest)
 }

@@ -1,7 +1,6 @@
 package scrapers
 
 import (
-	//"fmt"
 	"fmt"
 	"strings"
 	"time"
@@ -45,7 +44,7 @@ func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, 
 
 				event.TimestampSeconds = int(ts.UnixMilli()) / 1000
 
-				// fmt.Println("time", row.ChildText("td:nth-child(2)"), event.Headline, event.TimestampSeconds)
+				fmt.Println("time", row.ChildText("td:nth-child(2)"), dateString)
 
 				if event.TimestampSeconds < todaySecs {
 					fmt.Println(event.Headline, " past")
