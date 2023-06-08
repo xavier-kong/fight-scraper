@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -11,13 +12,11 @@ import (
 	"github.com/araddon/dateparse"
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"
-	"time"
 )
 
-type Bkfc struct {}
+type Bkfc struct{}
 
 var bkfc Bkfc
-
 
 func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []types.Event) {
 	var newEvents []types.Event
@@ -32,7 +31,7 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 
 	c.OnHTML(".row.card-module", func(upcomingContainer *colly.HTMLElement) {
 		upcomingContainer.ForEach("div.col-12.col-lg-4.mb-3", func(i int, eventCard *colly.HTMLElement) {
-			event := types.Event { Org: "bfkc" }
+			event := types.Event{Org: "bfkc"}
 
 			eventCard.ForEach(".card-text-events", func(i int, eventHeader *colly.HTMLElement) {
 				eventHeadlineString := strings.ToLower(eventHeader.ChildAttr("a", "title"))
@@ -55,10 +54,9 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 			})
 
 			if event.TimestampSeconds < todaySecs {
-				fmt.Println(event.Headline , " past")
+				fmt.Println(event.Headline, " past")
 				return
 			}
-
 
 			existingEventData, exists := existingEvents[event.Name]
 
@@ -67,9 +65,9 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 				return
 			}
 
-			if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
-			existingEventData.Headline != event.Headline) {
-				event.ID =  existingEventData.ID
+			if existingEventData.TimestampSeconds != event.TimestampSeconds ||
+				existingEventData.Headline != event.Headline {
+				event.ID = existingEventData.ID
 				eventsToUpdate = append(eventsToUpdate, event)
 			}
 		})
@@ -89,7 +87,7 @@ func (b Bkfc) getEventTimestamps() map[string]int {
 
 	c.OnHTML("tbody", func(h *colly.HTMLElement) {
 		h.ForEach("tr", func(i int, row *colly.HTMLElement) {
-			timeString := row.ChildText("td:nth-child(4)")
+			timeString := strings.ReplaceAll(row.ChildText("td:nth-child(4)"), "EST", "GMT-0400")
 
 			if timeString == "" {
 				return
@@ -102,12 +100,13 @@ func (b Bkfc) getEventTimestamps() map[string]int {
 			dateTimeString := fmt.Sprintf("%s-%02d-%s %s", year, monthInt, day, timeString)
 
 			ts, err := dateparse.ParseAny(dateTimeString)
-
 			if err != nil {
 				fmt.Println("error parsing", dateTimeString)
 				tsMap[eventNumber] = int(time.Now().AddDate(0, 0, 7).UnixMilli()) / 1000
 				return
 			}
+
+			fmt.Println(dateTimeString, eventNumber, tsMap[eventNumber])
 
 			tsMap[eventNumber] = int(ts.UnixMilli()) / 1000
 		})
@@ -119,19 +118,19 @@ func (b Bkfc) getEventTimestamps() map[string]int {
 }
 
 func (b Bkfc) monthNameToInt(month string) int {
-	nameInt := map[string]int {
-		"january": 1,
-		"february": 2,
-		"march": 3,
-		"april": 4,
-		"may": 5,
-		"june": 6,
-		"july": 7,
-		"august": 8,
+	nameInt := map[string]int{
+		"january":   1,
+		"february":  2,
+		"march":     3,
+		"april":     4,
+		"may":       5,
+		"june":      6,
+		"july":      7,
+		"august":    8,
 		"september": 9,
-		"october": 10,
-		"november": 11,
-		"december": 12,
+		"october":   10,
+		"november":  11,
+		"december":  12,
 	}
 
 	val, exists := nameInt[month]

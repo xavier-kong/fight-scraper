@@ -1,25 +1,25 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"os"
-	"time"
-	//"github.com/joho/godotenv"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
-	"github.com/xavier-kong/fight-scraper/types"
-	"github.com/xavier-kong/fight-scraper/scrapers"
+	"time" //"github.com/joho/godotenv"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"context"
+	"github.com/xavier-kong/fight-scraper/scrapers"
+	"github.com/xavier-kong/fight-scraper/types"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var Database *gorm.DB
 
 func verifyOrigin(req *events.LambdaFunctionURLRequest) bool {
-	isVerified := false;
+	isVerified := false
 
 	token, ok := req.Headers["my-precious-token"]
 
@@ -58,7 +58,7 @@ func handleError(err error) {
 
 func createDbClient() {
 	var err error
-	//dsn := fmt.Sprintf("%s&parseTime=True", os.Getenv("DSN"))
+	// dsn := fmt.Sprintf("%s&parseTime=True", os.Getenv("DSN"))
 
 	dsn := os.Getenv("DSN")
 
@@ -98,7 +98,7 @@ func createExistingEventsMap() map[string]map[string]types.Event {
 }
 
 func writeNewEventsToDb(events []types.Event) {
-	if (len(events) == 0) {
+	if len(events) == 0 {
 		fmt.Println("no new events...returning")
 		return
 	}
@@ -117,14 +117,14 @@ func updateExistingEvents(eventsToUpdate []types.Event) {
 }
 
 func logScrape(numNewEvents int, numEventsToUpdate int) {
-	log := types.Log {
-		Type: fmt.Sprintf("found %d new events and updated %d events", numNewEvents, numEventsToUpdate),
+	log := types.Log{
+		Type:             fmt.Sprintf("found %d new events and updated %d events", numNewEvents, numEventsToUpdate),
 		TimestampSeconds: int(time.Now().UnixMilli()) / 1000,
 	}
 
 	result := Database.Create(&log)
 
-	if (result.Error != nil) {
+	if result.Error != nil {
 		handleError(result.Error)
 	} else {
 		fmt.Println("logged at ", log.TimestampSeconds)
@@ -159,12 +159,12 @@ func handleRequest(ctx context.Context, req events.LambdaFunctionURLRequest) (st
 		return "", errors.New("verification error")
 	}
 
-	//loadEnv()
+	// loadEnv()
 	createDbClient()
 
-	if recentScrape := checkRecentScrape(); recentScrape {
+	/*if recentScrape := checkRecentScrape(); recentScrape {
 		return "", errors.New("already run recently...something is fishy here")
-	}
+	}*/
 
 	existingEvents := createExistingEventsMap()
 	newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
