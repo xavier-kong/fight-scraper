@@ -7,9 +7,10 @@ import (
 	"log"
 	"os"
 	"time"
-	"github.com/joho/godotenv"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/joho/godotenv"
 	"github.com/xavier-kong/fight-scraper/scrapers"
 	"github.com/xavier-kong/fight-scraper/types"
 	"gorm.io/driver/mysql"
@@ -159,22 +160,23 @@ func handleRequest(ctx context.Context, req events.LambdaFunctionURLRequest) (st
 		return "", errors.New("verification error")
 	}
 
-	//loadEnv()
+	// loadEnv()
 	createDbClient()
 
-	if recentScrape := checkRecentScrape(); recentScrape {
+	/*if recentScrape := checkRecentScrape(); recentScrape {
 		return "", errors.New("already run recently...something is fishy here")
-	}
+	}*/
 
 	existingEvents := createExistingEventsMap()
-	newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
-	writeNewEventsToDb(newEvents)
+	// newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
+	scrapers.FetchNewEvents(existingEvents)
+	/*writeNewEventsToDb(newEvents)
 	updateExistingEvents(eventsToUpdate)
-	logScrape(len(newEvents), len(eventsToUpdate))
+	logScrape(len(newEvents), len(eventsToUpdate))*/
 
 	return "done", nil
 }
 
 func main() {
-	 lambda.Start(handleRequest)
+	lambda.Start(handleRequest)
 }

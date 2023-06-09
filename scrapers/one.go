@@ -30,6 +30,7 @@ func (a One) fetchEventUrls(c *colly.Collector) []string {
 
 	return eventUrls
 }
+
 func (a One) getEventInfo(url string) types.Event {
 	c := colly.NewCollector(
 		colly.AllowedDomains("www.onefc.com"),
