@@ -38,6 +38,7 @@ func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, 
 
 				dateString := fmt.Sprintf("%s %d", row.ChildText("td:nth-child(1)"), currDate.Year())
 				event.TimestampSeconds = b.convertToTimestamp(dateString, row.ChildText("td:nth-child(2)"))
+				fmt.Println(event.TimestampSeconds)
 
 				if event.TimestampSeconds < todaySecs {
 					fmt.Println(event.Headline, " past")
@@ -83,8 +84,8 @@ func (b Bell) convertToTimestamp(date string, timeString string) int {
 		hour += 12
 	}
 
-	dateTimeString := fmt.Sprintf("%02d %s %s %02d:%s GMT", day, dateParts[0], dateParts[2][2:], hour, minutes)
-	ts, err := time.Parse("02 Jan 06 15:04 MST", dateTimeString)
+	dateTimeString := fmt.Sprintf("%02d %s %s %02d:%s ET", day, dateParts[0], dateParts[2][2:], hour, minutes)
+	ts, err := time.Parse("02 Jan 06 15:04 ET", dateTimeString)
 	if err != nil {
 		handleError(err)
 	}
