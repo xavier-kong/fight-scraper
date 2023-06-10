@@ -13,15 +13,15 @@ func FetchNewEvents(existingEvents map[string]map[string]types.Event) (newEvents
 	oneNewEvents, oneEventsToUpdate := fetchOneEvents(existingEvents["one"])
 	newEvents, eventsToUpdate = append(newEvents, oneNewEvents...), append(eventsToUpdate, oneEventsToUpdate...)
 */
-	bellNewEvents, bellEventsToUpdate := fetchBellatorEvents(existingEvents["bellator"])
-	newEvents, eventsToUpdate = append(newEvents, bellNewEvents...), append(eventsToUpdate, bellEventsToUpdate...)
+	//bellNewEvents, bellEventsToUpdate := fetchBellatorEvents(existingEvents["bellator"])
+	//newEvents, eventsToUpdate = append(newEvents, bellNewEvents...), append(eventsToUpdate, bellEventsToUpdate...)
 
-	/*bkfcNewEvents, bkfcEventsToUpdate := fetchBkfcEvents(existingEvents["bkfc"])
+	bkfcNewEvents, bkfcEventsToUpdate := fetchBkfcEvents(existingEvents["bkfc"])
 	newEvents, eventsToUpdate = append(newEvents, bkfcNewEvents...), append(eventsToUpdate, bkfcEventsToUpdate...)
 
-	pflNewEvents, pflEventsToUpdate := fetchPflEvents(existingEvents["pfl"])
-	newEvents, eventsToUpdate = append(newEvents, pflNewEvents...), append(eventsToUpdate, pflEventsToUpdate...)
-*/
+	//pflNewEvents, pflEventsToUpdate := fetchPflEvents(existingEvents["pfl"])
+	//newEvents, eventsToUpdate = append(newEvents, pflNewEvents...), append(eventsToUpdate, pflEventsToUpdate...)
+
 	return;
 }
 

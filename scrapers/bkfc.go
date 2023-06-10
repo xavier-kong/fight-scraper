@@ -1,17 +1,19 @@
 package scrapers
 
 import (
+	"bufio"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
 
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-
-	"github.com/araddon/dateparse"
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type Bkfc struct{}
@@ -22,7 +24,6 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 	var newEvents []types.Event
 	var eventsToUpdate []types.Event
 
-	eventTimestamps := bkfc.getEventTimestamps()
 	todaySecs := int(time.Now().UnixMilli() / 1000)
 
 	c := colly.NewCollector(
@@ -43,14 +44,7 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 
 				event.Url = fmt.Sprintf("https://www.bkfc.com%s", eventHeader.ChildAttr("a", "href"))
 
-				eventTs, exist := eventTimestamps[eventNumber]
-
-				if !exist { // use future incorrect timestamp that will be updated when scraper runs again
-					fmt.Println("no ts for ", eventNumber)
-					eventTs = int(time.Now().AddDate(0, 0, 7).UnixMilli() / 1000)
-				}
-
-				event.TimestampSeconds = eventTs
+				event.TimestampSeconds = bkfc.getEventTimestamp(event.Url)
 			})
 
 			if event.TimestampSeconds < todaySecs {
@@ -78,64 +72,54 @@ func fetchBkfcEvents(existingEvents map[string]types.Event) ([]types.Event, []ty
 	return newEvents, eventsToUpdate
 }
 
-func (b Bkfc) getEventTimestamps() map[string]int {
-	c := colly.NewCollector(
-		colly.AllowedDomains("www.itnwwe.com"),
-	)
+func (b Bkfc) getEventTimestamp(url string) int {
+	dateTimeString := bkfc.getDateTimeString(url)
 
-	tsMap := make(map[string]int)
+	if dateTimeString == "" {
+		panic(fmt.Sprintf("url has failed %s", url))
+	}
 
-	c.OnHTML("tbody", func(h *colly.HTMLElement) {
-		h.ForEach("tr", func(i int, row *colly.HTMLElement) {
-			timeString := strings.ReplaceAll(row.ChildText("td:nth-child(4)"), "EST", "GMT-0400")
+	parts := strings.Split(dateTimeString, "T")
 
-			if timeString == "" {
-				return
-			}
+	if len(parts) != 2 {
+		panic(fmt.Sprintf("dtstring FAILED %s", dateTimeString))
+	}
 
-			eventNumber := regexp.MustCompile(`\d+`).FindString(row.ChildText("td:nth-child(2)"))
-			dateStringParts := strings.Split(row.ChildText("td:nth-child(1)"), " ")
-			day, monthStr, year := dateStringParts[0], dateStringParts[1], dateStringParts[2]
-			monthInt := bkfc.monthNameToInt(strings.ToLower(monthStr))
-			dateTimeString := fmt.Sprintf("%s-%02d-%s %s", year, monthInt, day, timeString)
+	dateString, timeStringWithOffset := parts[0], parts[1]
 
-			ts, err := dateparse.ParseAny(dateTimeString)
-			if err != nil {
-				fmt.Println("error parsing", dateTimeString)
-				tsMap[eventNumber] = int(time.Now().AddDate(0, 0, 7).UnixMilli()) / 1000
-				return
-			}
+	timeString := strings.ReplaceAll(timeStringWithOffset, "+00:00", "")
 
-			tsMap[eventNumber] = int(ts.UnixMilli()) / 1000
-		})
-	})
+	timeStamp, err := time.Parse("2006-01-02 15:04:05", fmt.Sprintf("%s %s", dateString, timeString))
+	if err != nil {
+		panic(fmt.Sprintf("FAILED %s %s", dateString, timeString))
+	}
 
-	c.Visit("https://www.itnwwe.com/mma/bkfc-events-schedule/")
-
-	return tsMap
+	return int(timeStamp.UnixMilli()) / 1000
 }
 
-func (b Bkfc) monthNameToInt(month string) int {
-	nameInt := map[string]int{
-		"january":   1,
-		"february":  2,
-		"march":     3,
-		"april":     4,
-		"may":       5,
-		"june":      6,
-		"july":      7,
-		"august":    8,
-		"september": 9,
-		"october":   10,
-		"november":  11,
-		"december":  12,
+func (b Bkfc) getDateTimeString(url string) string {
+	resp, err := http.Get(url)
+	if err != nil {
+		panic(err)
 	}
 
-	val, exists := nameInt[month]
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// Convert the body to type string
+	sb := string(body)
 
-	if !exists {
-		val = 1
+	scanner := bufio.NewScanner(strings.NewReader(sb))
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "var date = moment(") {
+			line = strings.ReplaceAll(line, "var date = moment(\"", "")
+			line = strings.ReplaceAll(line, "\");", "")
+			return strings.Trim(line, " ")
+		}
 	}
 
-	return val
+	return ""
 }

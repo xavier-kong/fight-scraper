@@ -178,5 +178,16 @@ func handleRequest(ctx context.Context, req events.LambdaFunctionURLRequest) (st
 }
 
 func main() {
+	loadEnv()
+	createDbClient()
+
+	/*if recentScrape := checkRecentScrape(); recentScrape {
+		return "", errors.New("already run recently...something is fishy here")
+	}*/
+
+	existingEvents := createExistingEventsMap()
+	// newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
+	scrapers.FetchNewEvents(existingEvents)
+	return
 	lambda.Start(handleRequest)
 }
