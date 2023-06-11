@@ -17,53 +17,63 @@ var b Bell
 
 func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, []types.Event) {
 	c := colly.NewCollector(
-		colly.AllowedDomains("www.espn.com"),
+		colly.AllowedDomains("www.bellator.com"),
 	)
 
 	currDate := time.Now()
 
 	var newEvents []types.Event
 	var eventsToUpdate []types.Event
-	todaySecs := int(time.Now().UnixMilli() / 1000)
+	todaySecs := int(currDate.UnixMilli() / 1000)
+	fmt.Println(todaySecs)
 
-	c.OnHTML(".page-container", func(container *colly.HTMLElement) {
-		container.ForEachWithBreak("tbody.Table__TBODY", func(i int, table *colly.HTMLElement) bool {
-			table.ForEach("tr", func(j int, row *colly.HTMLElement) {
-				event := types.Event{
-					Headline: row.ChildText("td.event__col"),
-					Name:     strings.Split(row.ChildText("td.event__col"), ":")[0],
-					Url:      fmt.Sprintf("www.espn.com%s", row.ChildAttr("a", "href")),
-					Org:      "bellator",
-				}
-
-				dateString := fmt.Sprintf("%s %d", row.ChildText("td:nth-child(1)"), currDate.Year())
-				event.TimestampSeconds = b.convertToTimestamp(dateString, row.ChildText("td:nth-child(2)"))
-				fmt.Println(event.TimestampSeconds)
-
-				if event.TimestampSeconds < todaySecs {
-					fmt.Println(event.Headline, " past")
-					return
-				}
-
-				existingEventData, exists := existingEvents[event.Name]
-
-				if !exists {
-					newEvents = append(newEvents, event)
-					return
-				}
-
-				if existingEventData.TimestampSeconds != event.TimestampSeconds ||
-					existingEventData.Headline != event.Headline {
-					event.ID = existingEventData.ID
-					eventsToUpdate = append(eventsToUpdate, event)
-				}
-			})
-
-			return false
+	c.OnHTML("html", func(page *colly.HTMLElement) {
+		page.ForEach("a", func(i int, aTag *colly.HTMLElement) {
+			link := aTag.Attr("href")
+			if strings.Contains(link, "/event/") && !strings.Contains(link, "ticketmaster") {
+				fmt.Println(link)
+			}
 		})
 	})
 
-	c.Visit("https://www.espn.com/mma/schedule/_/league/bellator")
+	//c.OnHTML(".page-container", func(container *colly.HTMLElement) {
+	//container.ForEachWithBreak("tbody.Table__TBODY", func(i int, table *colly.HTMLElement) bool {
+	//table.ForEach("tr", func(j int, row *colly.HTMLElement) {
+	//event := types.Event{
+	//Headline: row.ChildText("td.event__col"),
+	//Name:     strings.Split(row.ChildText("td.event__col"), ":")[0],
+	//Url:      fmt.Sprintf("www.espn.com%s", row.ChildAttr("a", "href")),
+	//Org:      "bellator",
+	//}
+
+	// dateString := fmt.Sprintf("%s %d", row.ChildText("td:nth-child(1)"), currDate.Year())
+	// event.TimestampSeconds = b.convertToTimestamp(dateString, row.ChildText("td:nth-child(2)"))
+	// fmt.Println(event.TimestampSeconds)
+
+	//if event.TimestampSeconds < todaySecs {
+	//fmt.Println(event.Headline, " past")
+	//return
+	//}
+
+	// existingEventData, exists := existingEvents[event.Name]
+
+	//if !exists {
+	//newEvents = append(newEvents, event)
+	//return
+	//}
+
+	//if existingEventData.TimestampSeconds != event.TimestampSeconds ||
+	//existingEventData.Headline != event.Headline {
+	//event.ID = existingEventData.ID
+	//eventsToUpdate = append(eventsToUpdate, event)
+	//}
+	//})
+
+	//return false
+	//})
+	//})
+
+	c.Visit("https://www.bellator.com/event")
 
 	return newEvents, eventsToUpdate
 }

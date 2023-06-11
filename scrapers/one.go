@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/araddon/dateparse"
 	"github.com/gocolly/colly"
 	"github.com/icza/gox/timex"
 	"github.com/xavier-kong/fight-scraper/types"
@@ -50,8 +48,9 @@ func (a One) getEventInfo(url string) types.Event {
 			dateString := one.createDateString(h.ChildText(".day"))
 			timeString := one.createTimeString(h.ChildText(".time"))
 			timezoneString := h.ChildText(".timezone")
+			offset := strings.Split(h.ChildAttr(".timezone.hint", "data-hint"), " GMT ")[0]
 
-			t, err := dateparse.ParseAny(fmt.Sprintf("%s %s %s", dateString, timeString, timezoneString))
+			t, err := time.Parse("2006-01-02 03:04PM -07:00", fmt.Sprintf("%s %s %s", dateString, timeString, offset))
 			if err != nil { // use future incorrect timestamp that will be updated when scraper runs again
 				fmt.Println("error parsing", dateString, timeString, timezoneString)
 				event.TimestampSeconds = int(time.Now().AddDate(0, 0, 7).UnixMilli() / 1000)
