@@ -54,7 +54,7 @@ func (a One) getEventInfo(url string) types.Event {
 			t, err := time.Parse("2006-01-02 03:04PM -07:00", fmt.Sprintf("%s %s %s", dateString, timeString, offset))
 			if err != nil { // use future incorrect timestamp that will be updated when scraper runs again
 				fmt.Println("error parsing", dateString, timeString, timezoneString)
-				event.TimestampSeconds = int(time.Now().AddDate(0, 0, 7).UnixMilli() / 1000)
+				event.TimestampSeconds = 0
 				return false
 			}
 
@@ -84,7 +84,7 @@ func fetchOneEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	for _, url := range eventUrls {
 		event := one.getEventInfo(url)
 
-		if event.TimestampSeconds < todaySecs {
+		if event.TimestampSeconds > 0 && event.TimestampSeconds < todaySecs {
 			fmt.Println(event.Headline, "past")
 			continue
 		}
