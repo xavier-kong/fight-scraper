@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"
 	"golang.org/x/text/cases"
@@ -86,7 +87,7 @@ func (p Pfl) getTimestamp(date string, timeString string) int {
 	if strings.Contains(timeString, "ET") {
 		timeString = strings.ReplaceAll(timeString, "ET", "-0400")
 	} else {
-		fmt.Printf("unknown timezone detected in %s", timeString)
+		fmt.Printf("unknown timezone detected in %s\n", timeString)
 		return 0
 	}
 

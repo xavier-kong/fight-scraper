@@ -3,10 +3,11 @@ package scrapers
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
+
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"
-	"strings"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -24,10 +25,9 @@ func fetchUfcEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 		eventHeadline := e.ChildText(".c-card-event--result__headline")
 
 		timestampString := e.ChildAttr(".c-card-event--result__date", "data-main-card-timestamp")
-		timestampMs, err := strconv.Atoi(timestampString);
-
+		timestampMs, err := strconv.Atoi(timestampString)
 		if err != nil {
-			fmt.Printf("error converting %s to int", e.ChildAttr(".c-card-event--result__date", "data-main-card-timestamp"));
+			fmt.Printf("error converting %s to int\n", e.ChildAttr(".c-card-event--result__date", "data-main-card-timestamp"))
 			return
 		}
 
@@ -47,11 +47,11 @@ func fetchUfcEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 		existingEventData, exists := existingEvents[eventName]
 
 		event := types.Event{
-			Name: eventName,
-			Headline: eventHeadline,
+			Name:             eventName,
+			Headline:         eventHeadline,
 			TimestampSeconds: timestampMs,
-			Url: eventUrl,
-			Org: "ufc",
+			Url:              eventUrl,
+			Org:              "ufc",
 		}
 
 		if !exists {
@@ -59,9 +59,9 @@ func fetchUfcEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 			return
 		}
 
-		if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
-		existingEventData.Headline != event.Headline) {
-			event.ID =  existingEventData.ID
+		if existingEventData.TimestampSeconds != event.TimestampSeconds ||
+			existingEventData.Headline != event.Headline {
+			event.ID = existingEventData.ID
 			eventsToUpdate = append(eventsToUpdate, event)
 		}
 	})

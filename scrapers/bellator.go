@@ -2,6 +2,7 @@ package scrapers
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -28,77 +29,89 @@ func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, 
 	fmt.Println(todaySecs)
 
 	c.OnHTML("html", func(page *colly.HTMLElement) {
+		linkSet := make(map[string]bool)
+
 		page.ForEach("a", func(i int, aTag *colly.HTMLElement) {
 			link := aTag.Attr("href")
 			if strings.Contains(link, "/event/") && !strings.Contains(link, "ticketmaster") {
-				fmt.Println(link)
+				linkSet[link] = true
 			}
 		})
+
+		for link := range linkSet {
+			eventData := b.fetchEventData(fmt.Sprintf("https://www.bellator.com%s", link))
+			fmt.Println(eventData)
+		}
 	})
-
-	//c.OnHTML(".page-container", func(container *colly.HTMLElement) {
-	//container.ForEachWithBreak("tbody.Table__TBODY", func(i int, table *colly.HTMLElement) bool {
-	//table.ForEach("tr", func(j int, row *colly.HTMLElement) {
-	//event := types.Event{
-	//Headline: row.ChildText("td.event__col"),
-	//Name:     strings.Split(row.ChildText("td.event__col"), ":")[0],
-	//Url:      fmt.Sprintf("www.espn.com%s", row.ChildAttr("a", "href")),
-	//Org:      "bellator",
-	//}
-
-	// dateString := fmt.Sprintf("%s %d", row.ChildText("td:nth-child(1)"), currDate.Year())
-	// event.TimestampSeconds = b.convertToTimestamp(dateString, row.ChildText("td:nth-child(2)"))
-	// fmt.Println(event.TimestampSeconds)
-
-	//if event.TimestampSeconds < todaySecs {
-	//fmt.Println(event.Headline, " past")
-	//return
-	//}
-
-	// existingEventData, exists := existingEvents[event.Name]
-
-	//if !exists {
-	//newEvents = append(newEvents, event)
-	//return
-	//}
-
-	//if existingEventData.TimestampSeconds != event.TimestampSeconds ||
-	//existingEventData.Headline != event.Headline {
-	//event.ID = existingEventData.ID
-	//eventsToUpdate = append(eventsToUpdate, event)
-	//}
-	//})
-
-	//return false
-	//})
-	//})
 
 	c.Visit("https://www.bellator.com/event")
 
 	return newEvents, eventsToUpdate
 }
 
-func (b Bell) convertToTimestamp(date string, timeString string) int {
-	fmt.Println("input", date, timeString)
-	dateParts := strings.Split(date, " ")
-	day, _ := strconv.Atoi(dateParts[1])
-
-	timeParts := strings.Split(timeString, " ")
-	hoursMinutes := strings.Split(timeParts[0], ":")
-
-	hourString, minutes := hoursMinutes[0], hoursMinutes[1]
-
-	hour, _ := strconv.Atoi(hourString)
-
-	if timeParts[1] == "PM" && hour < 12 {
-		hour += 12
+func (b Bell) fetchEventData(link string) types.Event {
+	event := types.Event{
+		Org: "bellator",
+		Url: link,
 	}
 
-	dateTimeString := fmt.Sprintf("%02d %s %s %02d:%s ET", day, dateParts[0], dateParts[2][2:], hour, minutes)
-	ts, err := time.Parse("02 Jan 06 15:04 ET", dateTimeString)
-	if err != nil {
-		handleError(err)
-	}
+	c := colly.NewCollector(
+		colly.AllowedDomains("www.bellator.com"),
+	)
 
-	return int(ts.UnixMilli() / 1000)
+	c.OnHTML("html", func(page *colly.HTMLElement) {
+		page.ForEach("h1", func(i int, h1 *colly.HTMLElement) {
+			if strings.Contains(h1.Attr("class"), "Titlestyles") {
+				event.Headline = h1.ChildText("span")
+			}
+		})
+
+		page.ForEach("h2", func(i int, h2 *colly.HTMLElement) {
+			if strings.Contains(h2.Attr("class"), "BellatorNumber") {
+				event.Name = h2.Text
+			}
+		})
+
+		page.ForEach("time", func(i int, timeContainer *colly.HTMLElement) {
+			dateTime := timeContainer.Attr("datetime")
+
+			if string(dateTime[0]) == "P" {
+				// P3DT15H10.926033333333333M
+				re := regexp.MustCompile(`P(?P<Days>\d*)DT(?P<Hours>\d*)H(?P<Minutes>\d*).\d*`)
+				groups := re.FindStringSubmatch(dateTime)
+
+				if len(groups) != 4 {
+					fmt.Printf("error with date time %s\n", dateTime)
+					event.TimestampSeconds = 0
+				}
+
+				dayString, hoursString, minutesString := groups[1], groups[2], groups[3]
+
+				daysInt, err := strconv.Atoi(dayString)
+				hoursInt, err := strconv.Atoi(hoursString)
+				minutesInt, err := strconv.Atoi(minutesString)
+				if err != nil {
+					handleError(err)
+				}
+
+				fmt.Println(daysInt, hoursInt, minutesInt)
+
+				ts := time.Now()
+
+				ts = ts.AddDate(-1, -1, daysInt).Add(
+					time.Hour*time.Duration(hoursInt) +
+						time.Minute*time.Duration(minutesInt))
+
+				fmt.Println(ts.UnixMilli() / 1000)
+
+				ts = ts.Round(time.Minute * 30)
+
+				event.TimestampSeconds = int(ts.UnixMilli()) / 1000
+			}
+		})
+	})
+
+	c.Visit(link)
+
+	return event
 }
