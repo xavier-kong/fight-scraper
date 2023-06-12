@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/gocolly/colly"
 	"github.com/icza/gox/timex"
 	"github.com/xavier-kong/fight-scraper/types"

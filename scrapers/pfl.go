@@ -2,17 +2,15 @@ package scrapers
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
-	"github.com/araddon/dateparse"
 	"github.com/gocolly/colly"
 	"github.com/xavier-kong/fight-scraper/types"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
-type Pfl struct {}
+type Pfl struct{}
 
 var pfl Pfl
 
@@ -31,13 +29,19 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 			dateTimeString := h.ChildText("p.font-oswald.font-weight-bold.m-0")
 			parts := strings.Split(dateTimeString, " | ")
 
-			if len(parts) != 3 { // past return
+			if len(parts) <= 1 { // past return
 				return
 			}
 
-			timestamp := pfl.getTimestamp(parts[0],  strings.Replace(parts[2], "ESPN ", "", -1))
+			dateString, timeString := parts[0], ""
 
-			if timestamp < todaySecs { // past
+			if len(parts) == 3 {
+				timeString = parts[2]
+			}
+
+			timestamp := pfl.getTimestamp(dateString, strings.Replace(timeString, "ESPN ", "", -1))
+
+			if timestamp > 0 && timestamp < todaySecs { // past
 				return
 			}
 
@@ -45,21 +49,21 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 			eventName := cases.Title(language.English, cases.NoLower).String(eventNameString)
 			eventUrl := h.ChildAttr("a", "href")
 
-			event := types.Event {
+			event := types.Event{
 				TimestampSeconds: timestamp,
-				Name: eventName,
-				Headline: eventName,
-				Url: eventUrl,
-				Org: "pfl",
+				Name:             eventName,
+				Headline:         eventName,
+				Url:              eventUrl,
+				Org:              "pfl",
 			}
 
 			existingEventData, exists := existingEvents[event.Name]
 
 			if !exists {
 				newEvents = append(newEvents, event)
-			} else if (existingEventData.TimestampSeconds != event.TimestampSeconds ||
-			existingEventData.Headline != event.Headline) {
-				event.ID =  existingEventData.ID
+			} else if existingEventData.TimestampSeconds != event.TimestampSeconds ||
+				existingEventData.Headline != event.Headline {
+				event.ID = existingEventData.ID
 				eventsToUpdate = append(eventsToUpdate, event)
 			}
 		})
@@ -70,10 +74,23 @@ func fetchPflEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 	return newEvents, eventsToUpdate
 }
 
-func (p Pfl) getTimestamp(date string, time string) int {
-	date = regexp.MustCompile(`Monday |Tuesday |Wednesday |Thursday |Friday |Saturday |Sunday `).ReplaceAllString(date, "")
-	ts, err := dateparse.ParseAny(fmt.Sprintf("%s %s", date, strings.Replace(time, "PM", ":00PM", -1)))
+func (p Pfl) getTimestamp(date string, timeString string) int {
+	if timeString == "" {
+		return 0
+	}
 
+	parts := strings.Split(date, " ")
+	day := strings.ReplaceAll(parts[2], ",", "")
+	month, year := parts[1], parts[3]
+
+	if strings.Contains(timeString, "ET") {
+		timeString = strings.ReplaceAll(timeString, "ET", "-0400")
+	} else {
+		fmt.Printf("unknown timezone detected in %s", timeString)
+		return 0
+	}
+
+	ts, err := time.Parse("Jan 02 2006 15PM -0700", fmt.Sprintf("%s %s %s %s", month, day, year, timeString))
 	if err != nil {
 		handleError(err)
 	}
