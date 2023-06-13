@@ -39,8 +39,24 @@ func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, 
 		})
 
 		for link := range linkSet {
-			eventData := b.fetchEventData(fmt.Sprintf("https://www.bellator.com%s", link))
-			fmt.Println(eventData)
+			event := b.fetchEventData(fmt.Sprintf("https://www.bellator.com%s", link))
+
+			if event.TimestampSeconds > 0 && event.TimestampSeconds < todaySecs {
+				fmt.Println(event.Headline, "past")
+				continue
+			}
+
+			existingEventData, exists := existingEvents[event.Name]
+
+			if !exists {
+				newEvents = append(newEvents, event)
+				continue
+			}
+
+			if existingEventData.TimestampSeconds == 0 || existingEventData.Headline != event.Headline {
+				event.ID = existingEventData.ID
+				eventsToUpdate = append(eventsToUpdate, event)
+			}
 		}
 	})
 
@@ -94,17 +110,9 @@ func (b Bell) fetchEventData(link string) types.Event {
 					handleError(err)
 				}
 
-				fmt.Println(daysInt, hoursInt, minutesInt)
-
-				ts := time.Now()
-
-				ts = ts.AddDate(-1, -1, daysInt).Add(
-					time.Hour*time.Duration(hoursInt) +
-						time.Minute*time.Duration(minutesInt))
-
-				fmt.Println(ts.UnixMilli() / 1000)
-
-				ts = ts.Round(time.Minute * 30)
+				ts := time.Now().AddDate(-1, -1, daysInt).
+					Add(time.Hour*time.Duration(hoursInt) + time.Minute*time.Duration(minutesInt)).
+					Round(time.Minute * 30)
 
 				event.TimestampSeconds = int(ts.UnixMilli()) / 1000
 			}

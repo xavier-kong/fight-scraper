@@ -59,7 +59,7 @@ func fetchUfcEvents(existingEvents map[string]types.Event) ([]types.Event, []typ
 			return
 		}
 
-		if existingEventData.TimestampSeconds != event.TimestampSeconds ||
+		if existingEventData.TimestampSeconds == 0 ||
 			existingEventData.Headline != event.Headline {
 			event.ID = existingEventData.ID
 			eventsToUpdate = append(eventsToUpdate, event)
