@@ -163,31 +163,19 @@ func handleRequest(ctx context.Context, req events.LambdaFunctionURLRequest) (st
 	// loadEnv()
 	createDbClient()
 
-	/*if recentScrape := checkRecentScrape(); recentScrape {
+	if recentScrape := checkRecentScrape(); recentScrape {
 		return "", errors.New("already run recently...something is fishy here")
-	}*/
+	}
 
 	existingEvents := createExistingEventsMap()
-	// newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
-	scrapers.FetchNewEvents(existingEvents)
-	/*writeNewEventsToDb(newEvents)
+	newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
+	writeNewEventsToDb(newEvents)
 	updateExistingEvents(eventsToUpdate)
-	logScrape(len(newEvents), len(eventsToUpdate))*/
+	logScrape(len(newEvents), len(eventsToUpdate))
 
 	return "done", nil
 }
 
 func main() {
-	loadEnv()
-	createDbClient()
-
-	/*if recentScrape := checkRecentScrape(); recentScrape {
-		return "", errors.New("already run recently...something is fishy here")
-	}*/
-
-	existingEvents := createExistingEventsMap()
-	// newEvents, eventsToUpdate := scrapers.FetchNewEvents(existingEvents)
-	scrapers.FetchNewEvents(existingEvents)
-	return
 	lambda.Start(handleRequest)
 }
