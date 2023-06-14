@@ -110,7 +110,7 @@ func (b Bell) fetchEventData(link string) types.Event {
 					handleError(err)
 				}
 
-				ts := time.Now().AddDate(-1, -1, daysInt).
+				ts := time.Now().AddDate(0, 0, daysInt).
 					Add(time.Hour*time.Duration(hoursInt) + time.Minute*time.Duration(minutesInt)).
 					Round(time.Minute * 30)
 

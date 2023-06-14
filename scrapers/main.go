@@ -2,11 +2,11 @@ package scrapers
 
 import (
 	"log"
+
 	"github.com/xavier-kong/fight-scraper/types"
 )
 
 func FetchNewEvents(existingEvents map[string]map[string]types.Event) (newEvents []types.Event, eventsToUpdate []types.Event) {
-
 	ufcNewEvents, ufceEventsToUpdate := fetchUfcEvents(existingEvents["ufc"])
 	newEvents, eventsToUpdate = append(newEvents, ufcNewEvents...), append(eventsToUpdate, ufceEventsToUpdate...)
 
@@ -22,7 +22,7 @@ func FetchNewEvents(existingEvents map[string]map[string]types.Event) (newEvents
 	pflNewEvents, pflEventsToUpdate := fetchPflEvents(existingEvents["pfl"])
 	newEvents, eventsToUpdate = append(newEvents, pflNewEvents...), append(eventsToUpdate, pflEventsToUpdate...)
 
-	return;
+	return
 }
 
 func handleError(err error) {

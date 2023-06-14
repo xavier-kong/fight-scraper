@@ -81,7 +81,7 @@ func createExistingEventsMap() map[string]map[string]types.Event {
 
 	todaySecs := int(time.Now().UnixMilli() / 1000)
 
-	result := Database.Where("timestamp_seconds > ?", todaySecs).Find(&events)
+	result := Database.Where("timestamp_seconds > ? OR timestamp_seconds = 0", todaySecs).Find(&events)
 
 	if result.Error != nil {
 		handleError(result.Error)
@@ -177,5 +177,12 @@ func handleRequest(ctx context.Context, req events.LambdaFunctionURLRequest) (st
 }
 
 func main() {
+	// loadEnv()
+	// createDbClient()
+
+	// existingEvents := createExistingEventsMap()
+	// scrapers.FetchNewEvents(existingEvents)
+	// return
+
 	lambda.Start(handleRequest)
 }
