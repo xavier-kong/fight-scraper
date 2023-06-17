@@ -26,7 +26,6 @@ func fetchBellatorEvents(existingEvents map[string]types.Event) ([]types.Event, 
 	var newEvents []types.Event
 	var eventsToUpdate []types.Event
 	todaySecs := int(currDate.UnixMilli() / 1000)
-	fmt.Println(todaySecs)
 
 	c.OnHTML("html", func(page *colly.HTMLElement) {
 		linkSet := make(map[string]bool)
@@ -99,22 +98,22 @@ func (b Bell) fetchEventData(link string) types.Event {
 				if len(groups) != 4 {
 					fmt.Printf("error with date time %s\n", dateTime)
 					event.TimestampSeconds = 0
+				} else {
+					dayString, hoursString, minutesString := groups[1], groups[2], groups[3]
+
+					daysInt, err := strconv.Atoi(dayString)
+					hoursInt, err := strconv.Atoi(hoursString)
+					minutesInt, err := strconv.Atoi(minutesString)
+					if err != nil {
+						handleError(err)
+					}
+
+					ts := time.Now().AddDate(0, 0, daysInt).
+						Add(time.Hour*time.Duration(hoursInt) + time.Minute*time.Duration(minutesInt)).
+						Round(time.Minute * 30)
+
+					event.TimestampSeconds = int(ts.UnixMilli()) / 1000
 				}
-
-				dayString, hoursString, minutesString := groups[1], groups[2], groups[3]
-
-				daysInt, err := strconv.Atoi(dayString)
-				hoursInt, err := strconv.Atoi(hoursString)
-				minutesInt, err := strconv.Atoi(minutesString)
-				if err != nil {
-					handleError(err)
-				}
-
-				ts := time.Now().AddDate(0, 0, daysInt).
-					Add(time.Hour*time.Duration(hoursInt) + time.Minute*time.Duration(minutesInt)).
-					Round(time.Minute * 30)
-
-				event.TimestampSeconds = int(ts.UnixMilli()) / 1000
 			}
 		})
 	})

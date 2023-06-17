@@ -2,7 +2,6 @@ package scrapers
 
 import (
 	"log"
-
 	"github.com/xavier-kong/fight-scraper/types"
 )
 
